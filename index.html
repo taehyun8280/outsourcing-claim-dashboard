@@ -569,14 +569,14 @@
     font: inherit; font-weight: 600; font-size: 0.78rem;
     padding: 5px 10px; border-radius: 999px; cursor: pointer;
   }
-  .status-row { display: flex; align-items: center; gap: 6px; }
-  .del-btn {
-    border: 1px solid var(--border); background: var(--surface-alt); color: var(--ink-faint);
-    width: 26px; height: 26px; border-radius: 6px; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  .manage-cell { display: flex; gap: 6px; }
+  .manage-btn {
+    border: 1px solid var(--border); background: var(--surface-alt); color: var(--ink);
+    font: inherit; font-size: 0.76rem; font-weight: 600;
+    padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;
   }
-  .del-btn:hover { color: var(--danger); border-color: var(--danger); }
-  .del-btn svg { width: 14px; height: 14px; }
+  .manage-btn:hover { border-color: var(--accent); color: var(--accent); }
+  .manage-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
 </style>
 </head>
 <body>
@@ -629,7 +629,8 @@
         <th>LOT NO</th>
         <th>공급</th>
         <th>하자내역</th>
-        <th>이미지</th>
+        <th>사진/PDF</th>
+        <th>관리</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -654,7 +655,7 @@
 
 <div class="modal-overlay" id="registerModal" hidden>
   <div class="modal-card">
-    <h2>클레임 등록</h2>
+    <h2 id="modalTitle">클레임 등록</h2>
     <p class="modal-sub">저장하면 대시보드를 보는 모든 사람에게 바로 반영됩니다.</p>
     <form id="registerForm">
       <div class="form-grid">
@@ -852,16 +853,41 @@
     STATUS_LIST.forEach(s => fStatus.add(new Option(s, s)));
   }
 
-  function openModal() {
+  let editingId = null;
+  let editingCreatedAt = null;
+
+  function openModal(claim) {
     fillModalSelects();
     registerForm.reset();
-    pendingFiles = [];
+    if (claim) {
+      editingId = claim.id;
+      editingCreatedAt = claim.createdAt || new Date().toISOString();
+      document.getElementById('modalTitle').textContent = '클레임 수정';
+      document.getElementById('fCategory').value = claim.category || '';
+      document.getElementById('fType').value = claim.type || '';
+      fBrand.value = claim.brand || BRANDS[0];
+      fVendor.value = claim.vendor || VENDORS[0];
+      document.getElementById('fCode').value = claim.code || '';
+      document.getElementById('fColor').value = claim.color || '';
+      document.getElementById('fLot').value = claim.lotOn || '';
+      document.getElementById('fSupply').value = claim.supply || '';
+      fStatus.value = claim.status || '진행중';
+      document.getElementById('fDefect').value = claim.defect || '';
+      pendingFiles = (claim.images || []).map(img => ({
+        name: img.name, type: img.type, dataUrl: img.url, thumb: img.type === 'image' ? img.url : null
+      }));
+    } else {
+      editingId = null;
+      editingCreatedAt = null;
+      document.getElementById('modalTitle').textContent = '클레임 등록';
+      pendingFiles = [];
+    }
     renderFileChips();
     registerModal.hidden = false;
   }
   function closeModal() { registerModal.hidden = true; }
 
-  openRegisterBtn.addEventListener('click', openModal);
+  openRegisterBtn.addEventListener('click', () => openModal());
   cancelRegisterBtn.addEventListener('click', closeModal);
   registerModal.addEventListener('click', e => { if (e.target === registerModal) closeModal(); });
 
@@ -949,11 +975,16 @@
         status: fStatus.value,
         defect: document.getElementById('fDefect').value.trim(),
         images,
-        createdAt: new Date().toISOString()
+        createdAt: editingId ? editingCreatedAt : new Date().toISOString()
       };
-      await fbDb.ref(CLAIMS_PATH).push(entry);
+      if (editingId) {
+        await fbDb.ref(`${CLAIMS_PATH}/${editingId}`).set(entry);
+        showToast('수정했어요. 모두에게 바로 반영됐어요.');
+      } else {
+        await fbDb.ref(CLAIMS_PATH).push(entry);
+        showToast('등록 완료! 모두에게 바로 반영됐어요.');
+      }
       closeModal();
-      showToast('등록 완료! 모두에게 바로 반영됐어요.');
     } catch (err) {
       console.error(err);
       showToast('저장에 실패했어요. 담당자에게 문의해 주세요. (' + (err?.code || err?.message || '알 수 없는 오류') + ')', true);
@@ -1006,12 +1037,7 @@
     const status = c.status || '진행중';
     const color = STATUS_COLOR[status] || 'var(--ink-faint)';
     const opts = STATUS_LIST.map(s => `<option value="${s}" ${s === status ? 'selected' : ''}>${s}</option>`).join('');
-    return `<div class="status-row">
-      <select class="status-pill" data-status-id="${c.id}" style="--pill-color:${color}">${opts}</select>
-      <button type="button" class="del-btn" data-del-id="${c.id}" aria-label="삭제" title="삭제">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-    </div>`;
+    return `<select class="status-pill" data-status-id="${c.id}" style="--pill-color:${color}">${opts}</select>`;
   }
 
   function render() {
@@ -1043,7 +1069,11 @@
         <td data-label="LOT NO" class="mono">${escapeHtml(c.lotOn)}</td>
         <td data-label="공급">${escapeHtml(c.supply)}</td>
         <td data-label="하자내역" class="defect">${escapeHtml(c.defect)}</td>
-        <td data-label="이미지" class="imgcell">${imageCell(c)}</td>
+        <td data-label="사진/PDF" class="imgcell">${imageCell(c)}</td>
+        <td data-label="관리" class="manage-cell">
+          <button type="button" class="manage-btn" data-edit-id="${c.id}">수정</button>
+          <button type="button" class="manage-btn danger" data-del-id="${c.id}">삭제</button>
+        </td>
       </tr>
     `).join('');
 
@@ -1059,6 +1089,12 @@
         fbDb.ref(`${CLAIMS_PATH}/${btn.dataset.delId}`).remove()
           .then(() => showToast('삭제했어요.'))
           .catch(err => showToast('삭제 실패: ' + (err?.message || ''), true));
+      });
+    });
+    tbody.querySelectorAll('button[data-edit-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const c = CLAIMS.find(x => String(x.id) === btn.dataset.editId);
+        if (c) openModal(c);
       });
     });
 
