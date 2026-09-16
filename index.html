@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>외주 클레임 대시보드</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef1f6;
+    --grid-line: rgba(47,90,168,0.06);
+    --surface: #ffffff;
+    --surface-alt: #eaeef4;
+    --border: #d9dee6;
+    --ink: #171d27;
+    --ink-dim: #5b6472;
+    --ink-faint: #8b93a1;
+    --accent: #2f5aa8;
+    --accent-2: #1f8f7a;
+    --accent-soft: #e7edf9;
+    --accent-ink: #ffffff;
+    --warn: #a5670c;
+    --warn-soft: #f7ecd9;
+    --danger: #b23a3a;
+    --danger-soft: #f7e4e2;
+    --focus: #2f5aa8;
+    --radius: 12px;
+    --shadow: 0 1px 2px rgba(20,26,37,0.06), 0 8px 24px rgba(20,26,37,0.06);
+    --tag-sat: 68%;
+    --tag-bg-l: 93%;
+    --tag-text-l: 32%;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10141b;
+      --grid-line: rgba(111,150,222,0.07);
+      --surface: #191f28;
+      --surface-alt: #212834;
+      --border: #2c3442;
+      --ink: #e9ebf0;
+      --ink-dim: #a3abb8;
+      --ink-faint: #6d7683;
+      --accent: #7ea2e6;
+      --accent-2: #4bbfa4;
+      --accent-soft: #1f2b42;
+      --accent-ink: #0c111a;
+      --warn: #dba746;
+      --warn-soft: #35291a;
+      --danger: #e08078;
+      --danger-soft: #3a2320;
+      --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 26px rgba(0,0,0,0.3);
+      --tag-sat: 55%;
+      --tag-bg-l: 24%;
+      --tag-text-l: 84%;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10141b;
+    --grid-line: rgba(111,150,222,0.07);
+    --surface: #191f28;
+    --surface-alt: #212834;
+    --border: #2c3442;
+    --ink: #e9ebf0;
+    --ink-dim: #a3abb8;
+    --ink-faint: #6d7683;
+    --accent: #7ea2e6;
+    --accent-2: #4bbfa4;
+    --accent-soft: #1f2b42;
+    --accent-ink: #0c111a;
+    --warn: #dba746;
+    --warn-soft: #35291a;
+    --danger: #e08078;
+    --danger-soft: #3a2320;
+    --shadow: 0 1px 2px rgba(0,0,0,0.35), 0 10px 26px rgba(0,0,0,0.3);
+    --tag-sat: 55%;
+    --tag-bg-l: 24%;
+    --tag-text-l: 84%;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background:
+      repeating-linear-gradient(0deg, var(--grid-line) 0 1px, transparent 1px 28px),
+      repeating-linear-gradient(90deg, var(--grid-line) 0 1px, transparent 1px 28px),
+      var(--bg);
+    color: var(--ink);
+    font-family: "IBM Plex Sans KR", "Malgun Gothic", sans-serif;
+    padding-inline: 20px;
+    padding-block: 30px 60px;
+    max-width: 1220px;
+    margin: 0 auto;
+  }
+  .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-radius: 2px;
+    background: var(--accent);
+    display: inline-block;
+    transform: rotate(45deg);
+  }
+
+  header.top {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    margin-bottom: 18px;
+  }
+  header.top h1 {
+    font-size: 1.65rem;
+    font-weight: 700;
+    margin: 0 0 5px;
+    text-wrap: balance;
+    letter-spacing: -0.01em;
+  }
+  header.top p {
+    margin: 0;
+    color: var(--ink-dim);
+    font-size: 0.9rem;
+  }
+  .vendor-switch {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 5px 6px 5px 14px;
+    box-shadow: var(--shadow);
+  }
+  .vendor-switch label {
+    font-size: 0.78rem;
+    color: var(--ink-dim);
+    white-space: nowrap;
+  }
+  .vendor-switch select {
+    border: none;
+    background: var(--accent-soft);
+    color: var(--ink);
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.86rem;
+    padding: 7px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .vendor-switch select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+  .spectrum {
+    height: 5px;
+    border-radius: 999px;
+    margin-bottom: 20px;
+    display: flex;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .spectrum span { flex: 1; }
+
+  .chiprow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 22px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--ink-dim);
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 500;
+    padding: 6px 12px 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+  }
+  .chip:hover { transform: translateY(-1px); border-color: var(--ink-faint); }
+  .chip .dot { width: 9px; height: 9px; border-radius: 50%; background: hsl(var(--hue) var(--tag-sat) 50%); flex-shrink: 0; }
+  .chip .count { font-family: "IBM Plex Mono", monospace; color: var(--ink-faint); }
+  .chip[aria-pressed="true"] {
+    background: var(--accent-soft);
+    border-color: var(--accent);
+    color: var(--ink);
+  }
+  .chip[aria-pressed="true"] .count { color: var(--accent); }
+  .chip.all[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+  .chip.all[aria-pressed="true"] .count { color: var(--accent-ink); }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+  .stat {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+  .stat::before {
+    content: "";
+    position: absolute; inset: 0 auto 0 0;
+    width: 3px;
+    background: var(--stat-color, var(--accent));
+  }
+  .stat .head { display: flex; align-items: center; gap: 6px; color: var(--ink-faint); }
+  .stat .head svg { width: 14px; height: 14px; }
+  .stat .num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 1.7rem;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .stat .label {
+    color: var(--ink-dim);
+    font-size: 0.78rem;
+    margin-top: 2px;
+  }
+
+  .toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .toolbar input[type="search"], .toolbar select {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.86rem;
+    padding: 9px 12px;
+    border-radius: 8px;
+  }
+  .toolbar input[type="search"] { flex: 1 1 220px; }
+  .toolbar input[type="search"]:focus-visible, .toolbar select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  thead th {
+    text-align: left;
+    font-size: 0.71rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+    background: var(--surface-alt);
+    padding: 11px 12px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  tbody tr { animation: rowIn 0.28s ease both; }
+  tbody tr:nth-child(n+2) { animation-delay: calc(var(--i, 0) * 18ms); }
+  @keyframes rowIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { tbody tr { animation: none; } }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-alt); }
+  td.defect { max-width: 260px; }
+  td.source .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: hsl(var(--hue) var(--tag-sat) var(--tag-bg-l));
+    color: hsl(var(--hue) var(--tag-sat) var(--tag-text-l));
+    border-radius: 6px;
+    padding: 3px 9px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  td.source .tag::before {
+    content: "";
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: hsl(var(--hue) var(--tag-sat) 45%);
+  }
+
+  .thumb {
+    width: 56px; height: 56px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--surface-alt);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+    cursor: pointer;
+    padding: 0;
+    transition: transform 0.12s ease;
+  }
+  .thumb:hover { transform: scale(1.05); }
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .thumb svg { width: 22px; height: 22px; color: var(--ink-faint); }
+
+  .empty {
+    padding: 52px 20px;
+    text-align: center;
+    color: var(--ink-dim);
+  }
+  .empty svg { width: 40px; height: 40px; color: var(--ink-faint); margin-bottom: 10px; }
+
+  footer.note {
+    margin-top: 18px;
+    color: var(--ink-faint);
+    font-size: 0.78rem;
+    text-align: center;
+  }
+
+  .lightbox {
+    position: fixed; inset: 0;
+    background: rgba(8,10,14,0.72);
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    z-index: 50;
+  }
+  .lightbox[hidden] { display: none; }
+  .lightbox .box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    max-width: min(560px, 100%);
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .lightbox img { width: 100%; display: block; max-height: 60vh; object-fit: contain; background: var(--surface-alt); }
+  .lightbox .cap { padding: 14px 16px; font-size: 0.85rem; }
+  .lightbox .cap .defecttxt { color: var(--ink-dim); margin-top: 4px; }
+  .lightbox button.close {
+    position: absolute; top: 34px; right: 34px;
+    background: var(--surface); border: 1px solid var(--border);
+    width: 34px; height: 34px; border-radius: 50%;
+    font-size: 1.1rem; cursor: pointer; color: var(--ink);
+  }
+
+  @media (max-width: 720px) {
+    .panel table, .panel thead, .panel tbody, .panel th, .panel td, .panel tr { display: block; }
+    thead { display: none; }
+    tbody tr {
+      border-bottom: 8px solid var(--bg);
+      padding: 12px 14px;
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 6px 12px;
+    }
+    tbody td {
+      border: none;
+      padding: 3px 0;
+      display: grid;
+      grid-template-columns: subgrid;
+      grid-column: 1 / -1;
+    }
+    tbody td::before {
+      content: attr(data-label);
+      color: var(--ink-faint);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      padding-top: 2px;
+    }
+    td.imgcell { justify-self: start; }
+  }
+</style>
+</head>
+<body>
+
+<span class="eyebrow">협력사 품질관리</span>
+<header class="top">
+  <div>
+    <h1>외주 클레임 대시보드</h1>
+    <p id="subtitle">업체를 선택하면 해당 업체 관련 항목만 표시됩니다.</p>
+  </div>
+  <div class="vendor-switch">
+    <label for="vendorSelect">보기</label>
+    <select id="vendorSelect"></select>
+  </div>
+</header>
+
+<div class="spectrum" id="spectrum"></div>
+
+<div class="chiprow" id="chipRow"></div>
+
+<div class="stats" id="stats"></div>
+
+<div class="toolbar">
+  <input type="search" id="searchBox" placeholder="제품코드, 하자내역, 브랜드로 검색">
+  <select id="brandFilter"></select>
+</div>
+
+<div class="panel">
+  <table id="dataTable">
+    <thead>
+      <tr>
+        <th>구분</th>
+        <th>유형</th>
+        <th>브랜드</th>
+        <th>원인처</th>
+        <th>제품코드</th>
+        <th>색상</th>
+        <th>LOT ON</th>
+        <th>공급</th>
+        <th>하자내역</th>
+        <th>이미지</th>
+      </tr>
+    </thead>
+    <tbody id="tbody"></tbody>
+  </table>
+  <div class="empty" id="emptyState" hidden>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6M12 3v18M3 12h.01M21 12h.01" stroke-linecap="round"/></svg>
+    <div>해당 업체의 등록된 클레임이 아직 없습니다.</div>
+  </div>
+</div>
+
+<footer class="note">항목 등록·수정은 품질관리 담당자에게 문의해 주세요.</footer>
+
+<div class="lightbox" id="lightbox" hidden>
+  <button class="close" id="lightboxClose" aria-label="닫기">✕</button>
+  <div class="box">
+    <img id="lightboxImg" src="" alt="">
+    <div class="cap">
+      <div><strong id="lightboxCode"></strong></div>
+      <div class="defecttxt" id="lightboxDefect"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // 업체 목록(가나다 순) — 새 업체가 생기면 여기에 추가하고 아래 VENDOR_HUE에도 색을 지정해 주세요
+  const VENDORS = ["가온", "금용", "송아", "에픽", "엘에스에프", "올품", "유진", "정운", "제일", "진산"];
+
+  // 업체별 고유 색상(hue, 0-360) — 표와 칩에서 업체를 한눈에 구분하기 위한 값
+  const VENDOR_HUE = {
+    "가온": 8, "금용": 44, "송아": 80, "에픽": 152, "엘에스에프": 188,
+    "올품": 224, "유진": 260, "정운": 296, "제일": 332, "진산": 116
+  };
+  function hueOf(vendor) { return VENDOR_HUE[vendor] ?? 210; }
+
+  // 브랜드 목록 — 새 브랜드가 생기면 여기에 추가
+  const BRANDS = ["퍼시스", "일룸", "데스커", "시디즈", "알로소", "슬로우베드"];
+
+  // 클레임 데이터 — 담당자가 새 항목을 전달하면 이 배열에 추가됩니다
+  const CLAIMS = [
+    {
+      id: 9,
+      category: "고객불만",
+      type: "자재",
+      brand: "일룸",
+      vendor: "제일",
+      source: "외주(제일)",
+      code: "IHS14CP06A",
+      color: "WW",
+      lotOn: "2026.08.27 J",
+      supply: "(벽고정)_정찬숙(차)",
+      defect: "전선캡 커버 누락",
+      image: null
+    }
+  ];
+
+  const vendorSelect = document.getElementById('vendorSelect');
+  const brandFilter = document.getElementById('brandFilter');
+  const searchBox = document.getElementById('searchBox');
+  const tbody = document.getElementById('tbody');
+  const emptyState = document.getElementById('emptyState');
+  const statsEl = document.getElementById('stats');
+  const subtitle = document.getElementById('subtitle');
+  const chipRow = document.getElementById('chipRow');
+  const spectrum = document.getElementById('spectrum');
+
+  function loadVendor() {
+    try { return localStorage.getItem('claim_dashboard_vendor') || '__ALL__'; } catch (e) { return '__ALL__'; }
+  }
+  function saveVendor(v) {
+    try { localStorage.setItem('claim_dashboard_vendor', v); } catch (e) {}
+  }
+
+  function buildSpectrum() {
+    spectrum.innerHTML = VENDORS.map(v => `<span style="background:hsl(${hueOf(v)} var(--tag-sat) 52%)"></span>`).join('');
+  }
+
+  function buildVendorOptions() {
+    vendorSelect.innerHTML = '';
+    vendorSelect.add(new Option('전체보기 (사내)', '__ALL__'));
+    VENDORS.forEach(v => vendorSelect.add(new Option(v, v)));
+    vendorSelect.value = VENDORS.includes(loadVendor()) ? loadVendor() : '__ALL__';
+  }
+
+  function buildBrandOptions() {
+    brandFilter.innerHTML = '';
+    brandFilter.add(new Option('전체 브랜드', ''));
+    BRANDS.forEach(b => brandFilter.add(new Option(b, b)));
+  }
+
+  function setVendor(v) {
+    vendorSelect.value = v;
+    saveVendor(v);
+    render();
+  }
+
+  function buildChips() {
+    const counts = {};
+    CLAIMS.forEach(c => { counts[c.vendor] = (counts[c.vendor] || 0) + 1; });
+    const current = vendorSelect.value;
+    const allChip = `<button class="chip all" data-v="__ALL__" aria-pressed="${current === '__ALL__'}">전체<span class="count">${CLAIMS.length}</span></button>`;
+    const chips = VENDORS.map(v => `
+      <button class="chip" data-v="${v}" aria-pressed="${current === v}" style="--hue:${hueOf(v)}">
+        <span class="dot"></span>${v}<span class="count">${counts[v] || 0}</span>
+      </button>
+    `).join('');
+    chipRow.innerHTML = allChip + chips;
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function placeholderThumb() {
+    return '<span class="thumb" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 17 5-5 4 4 3-3 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+  }
+
+  function render() {
+    const vendor = vendorSelect.value;
+    const brand = brandFilter.value;
+    const q = searchBox.value.trim().toLowerCase();
+
+    subtitle.textContent = vendor === '__ALL__'
+      ? '전체 업체의 클레임 항목을 보고 있습니다.'
+      : `"${vendor}" 업체 관련 클레임 항목만 표시 중입니다.`;
+
+    let rows = CLAIMS.filter(c => vendor === '__ALL__' || c.vendor === vendor);
+    if (brand) rows = rows.filter(c => c.brand === brand);
+    if (q) {
+      rows = rows.filter(c =>
+        [c.code, c.defect, c.brand, c.category, c.type, c.source].some(f => String(f ?? '').toLowerCase().includes(q))
+      );
+    }
+
+    tbody.innerHTML = rows.map((c, i) => `
+      <tr style="--i:${i}">
+        <td data-label="구분">${escapeHtml(c.category)}</td>
+        <td data-label="유형">${escapeHtml(c.type)}</td>
+        <td data-label="브랜드">${escapeHtml(c.brand)}</td>
+        <td data-label="원인처" class="source"><span class="tag" style="--hue:${hueOf(c.vendor)}">${escapeHtml(c.source)}</span></td>
+        <td data-label="제품코드" class="mono">${escapeHtml(c.code)}</td>
+        <td data-label="색상" class="mono">${escapeHtml(c.color)}</td>
+        <td data-label="LOT ON" class="mono">${escapeHtml(c.lotOn)}</td>
+        <td data-label="공급">${escapeHtml(c.supply)}</td>
+        <td data-label="하자내역" class="defect">${escapeHtml(c.defect)}</td>
+        <td data-label="이미지" class="imgcell">${
+          c.image
+            ? `<button class="thumb" data-id="${c.id}"><img src="${escapeHtml(c.image)}" alt="${escapeHtml(c.defect)} 사진"></button>`
+            : placeholderThumb()
+        }</td>
+      </tr>
+    `).join('');
+
+    emptyState.hidden = rows.length !== 0;
+    document.getElementById('dataTable').style.display = rows.length === 0 ? 'none' : '';
+
+    const brandCount = new Set(rows.map(r => r.brand)).size;
+    const vendorCount = new Set(rows.map(r => r.vendor)).size;
+    const latest = rows.slice().sort((a, b) => String(b.lotOn).localeCompare(String(a.lotOn)))[0];
+    statsEl.innerHTML = `
+      <div class="stat" style="--stat-color:var(--accent)">
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg>표시 중인 건수</div>
+        <div class="num mono">${rows.length}</div>
+      </div>
+      <div class="stat" style="--stat-color:var(--accent-2)">
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>전체 등록 건수</div>
+        <div class="num mono">${CLAIMS.length}</div>
+      </div>
+      <div class="stat" style="--stat-color:var(--warn)">
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/></svg>관련 업체 수</div>
+        <div class="num mono">${vendorCount}</div>
+      </div>
+      <div class="stat" style="--stat-color:var(--danger)">
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 7v5l3 3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="8.5"/></svg>최근 LOT ON</div>
+        <div class="num mono" style="font-size:1.15rem">${latest ? escapeHtml(latest.lotOn) : '—'}</div>
+      </div>
+    `;
+
+    buildChips();
+  }
+
+  tbody.addEventListener('click', e => {
+    const btn = e.target.closest('button.thumb[data-id]');
+    if (!btn) return;
+    const c = CLAIMS.find(x => String(x.id) === btn.dataset.id);
+    if (!c || !c.image) return;
+    document.getElementById('lightboxImg').src = c.image;
+    document.getElementById('lightboxCode').textContent = `${c.code} / ${c.color}`;
+    document.getElementById('lightboxDefect').textContent = c.defect;
+    document.getElementById('lightbox').hidden = false;
+  });
+  document.getElementById('lightboxClose').addEventListener('click', () => {
+    document.getElementById('lightbox').hidden = true;
+  });
+  document.getElementById('lightbox').addEventListener('click', e => {
+    if (e.target.id === 'lightbox') e.target.hidden = true;
+  });
+
+  chipRow.addEventListener('click', e => {
+    const btn = e.target.closest('button.chip[data-v]');
+    if (!btn) return;
+    setVendor(btn.dataset.v);
+  });
+
+  vendorSelect.addEventListener('change', () => { saveVendor(vendorSelect.value); render(); });
+  brandFilter.addEventListener('change', render);
+  searchBox.addEventListener('input', render);
+
+  buildSpectrum();
+  buildVendorOptions();
+  buildBrandOptions();
+  render();
+</script>
+</body>
+</html>
