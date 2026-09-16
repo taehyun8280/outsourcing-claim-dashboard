@@ -390,25 +390,214 @@
     }
     td.imgcell { justify-self: start; }
   }
+
+  /* --- brand bar / logo --- */
+  .brandbar {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #14203a;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.95rem;
+    letter-spacing: 0.03em;
+    padding: 9px 14px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    box-shadow: var(--shadow);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .logo-badge { background: #eef1f6; color: #14203a; }
+  }
+  :root[data-theme="dark"] .logo-badge { background: #eef1f6; color: #14203a; }
+  .brandbar .divider { width: 1px; height: 30px; background: var(--border); flex-shrink: 0; }
+
+  header.top { align-items: center; }
+  .actions-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: none;
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.86rem;
+    padding: 10px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: var(--shadow);
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  .btn-primary:hover { transform: translateY(-1px); filter: brightness(1.05); }
+  .btn-primary svg { width: 16px; height: 16px; }
+
+  /* --- modal / form --- */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(8,10,14,0.55);
+    display: flex; align-items: flex-start; justify-content: center;
+    padding: 40px 20px;
+    overflow-y: auto;
+    z-index: 60;
+  }
+  .modal-overlay[hidden] { display: none; }
+  .modal-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    width: min(640px, 100%);
+    padding: 24px;
+  }
+  .modal-card h2 { margin: 0 0 4px; font-size: 1.2rem; }
+  .modal-card .modal-sub { margin: 0 0 18px; color: var(--ink-dim); font-size: 0.85rem; }
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 14px;
+    margin-bottom: 14px;
+  }
+  .form-grid .full { grid-column: 1 / -1; }
+  .field label {
+    display: block;
+    font-size: 0.76rem;
+    color: var(--ink-dim);
+    margin-bottom: 5px;
+  }
+  .field input, .field select, .field textarea {
+    width: 100%;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.86rem;
+    padding: 9px 10px;
+    border-radius: 8px;
+  }
+  .field textarea { resize: vertical; min-height: 54px; }
+  .field input:focus-visible, .field select:focus-visible, .field textarea:focus-visible {
+    outline: 2px solid var(--focus); outline-offset: 1px;
+  }
+
+  .dropzone {
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius);
+    padding: 22px 16px;
+    text-align: center;
+    color: var(--ink-dim);
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: border-color 0.12s ease, background 0.12s ease;
+    margin-bottom: 12px;
+  }
+  .dropzone.drag { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); }
+  .dropzone svg { width: 26px; height: 26px; color: var(--ink-faint); margin-bottom: 6px; }
+  .dropzone strong { color: var(--accent); }
+
+  .filechips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .filechip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface-alt);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 6px 8px;
+    font-size: 0.78rem;
+    max-width: 220px;
+  }
+  .filechip img { width: 30px; height: 30px; border-radius: 5px; object-fit: cover; flex-shrink: 0; }
+  .filechip .pdfmark {
+    width: 30px; height: 30px; border-radius: 5px; flex-shrink: 0;
+    background: var(--danger-soft); color: var(--danger);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.62rem; font-weight: 700;
+  }
+  .filechip .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .filechip button {
+    border: none; background: none; color: var(--ink-faint); cursor: pointer;
+    font-size: 0.9rem; line-height: 1; padding: 2px;
+  }
+
+  .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+  .btn-ghost {
+    background: none; border: 1px solid var(--border); color: var(--ink-dim);
+    font: inherit; font-size: 0.86rem; padding: 9px 16px; border-radius: 999px; cursor: pointer;
+  }
+
+  /* --- pending queue --- */
+  .pending-banner {
+    background: var(--warn-soft);
+    border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 18px;
+  }
+  .pending-banner[hidden] { display: none; }
+  .pending-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .pending-head strong { color: var(--warn); font-size: 0.88rem; }
+  .pending-head p { margin: 3px 0 0; font-size: 0.78rem; color: var(--ink-dim); }
+  .pending-list { display: flex; flex-direction: column; gap: 8px; }
+  .pending-item {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 10px; font-size: 0.82rem;
+  }
+  .pending-item .meta { color: var(--ink-dim); font-size: 0.76rem; }
+  .pending-item .row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .pending-item button {
+    border: 1px solid var(--border); background: var(--surface-alt); color: var(--ink);
+    font: inherit; font-size: 0.75rem; padding: 5px 9px; border-radius: 6px; cursor: pointer;
+  }
 </style>
 </head>
 <body>
 
-<span class="eyebrow">협력사 품질관리</span>
+<div class="brandbar">
+  <span class="logo-badge">FURSYS</span>
+  <span class="divider"></span>
+  <div>
+    <span class="eyebrow">협력사 품질관리</span>
+    <h1 style="margin:2px 0 0;font-size:1.3rem;">외주 클레임 대시보드</h1>
+  </div>
+</div>
+
 <header class="top">
   <div>
-    <h1>외주 클레임 대시보드</h1>
     <p id="subtitle">업체를 선택하면 해당 업체 관련 항목만 표시됩니다.</p>
   </div>
-  <div class="vendor-switch">
-    <label for="vendorSelect">보기</label>
-    <select id="vendorSelect"></select>
+  <div class="actions-right">
+    <div class="vendor-switch">
+      <label for="vendorSelect">보기</label>
+      <select id="vendorSelect"></select>
+    </div>
+    <button type="button" class="btn-primary" id="openRegister">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
+      클레임 등록
+    </button>
   </div>
 </header>
 
 <div class="spectrum" id="spectrum"></div>
 
 <div class="chiprow" id="chipRow"></div>
+
+<div class="pending-banner" id="pendingBanner" hidden>
+  <div class="pending-head">
+    <div>
+      <strong>⏳ 아직 반영되지 않은 등록건</strong>
+      <p>이 브라우저에만 임시로 저장돼 있어요. 아래 "복사"로 내용을 복사해 사진과 함께 담당자(클로드)에게 전달하면 실제 대시보드에 반영됩니다.</p>
+    </div>
+    <button type="button" class="btn-ghost" id="copyAllPending">전체 내용 복사</button>
+  </div>
+  <div class="pending-list" id="pendingList"></div>
+</div>
 
 <div class="stats" id="stats"></div>
 
@@ -451,6 +640,65 @@
       <div><strong id="lightboxCode"></strong></div>
       <div class="defecttxt" id="lightboxDefect"></div>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="registerModal" hidden>
+  <div class="modal-card">
+    <h2>클레임 등록</h2>
+    <p class="modal-sub">입력한 내용은 이 브라우저에만 임시 저장돼요. 저장 후 뜨는 안내에 따라 담당자에게 전달해 주세요.</p>
+    <form id="registerForm">
+      <div class="form-grid">
+        <div class="field">
+          <label for="fCategory">구분</label>
+          <input id="fCategory" type="text" placeholder="예: 고객불만" required>
+        </div>
+        <div class="field">
+          <label for="fType">유형</label>
+          <input id="fType" type="text" placeholder="예: 자재">
+        </div>
+        <div class="field">
+          <label for="fBrand">브랜드</label>
+          <select id="fBrand"></select>
+        </div>
+        <div class="field">
+          <label for="fVendor">원인처(업체)</label>
+          <select id="fVendor"></select>
+        </div>
+        <div class="field">
+          <label for="fCode">제품코드</label>
+          <input id="fCode" type="text" placeholder="예: IHS14CP06A">
+        </div>
+        <div class="field">
+          <label for="fColor">색상</label>
+          <input id="fColor" type="text" placeholder="예: WW">
+        </div>
+        <div class="field">
+          <label for="fLot">LOT ON</label>
+          <input id="fLot" type="text" placeholder="예: 2026.08.27 J">
+        </div>
+        <div class="field">
+          <label for="fSupply">공급</label>
+          <input id="fSupply" type="text" placeholder="예: (벽고정)_정찬숙(차)">
+        </div>
+        <div class="field full">
+          <label for="fDefect">하자내역</label>
+          <textarea id="fDefect" placeholder="하자 내용을 적어주세요"></textarea>
+        </div>
+      </div>
+
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="사진 또는 PDF 첨부">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div><strong>클릭</strong>하거나 사진/PDF 파일을 여기로 <strong>드래그</strong>해서 첨부하세요</div>
+        <input type="file" id="fileInput" accept="image/*,application/pdf" multiple hidden>
+      </div>
+      <div class="filechips" id="fileChips"></div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-ghost" id="cancelRegister">취소</button>
+        <button type="submit" class="btn-primary">저장</button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -519,6 +767,173 @@
     brandFilter.add(new Option('전체 브랜드', ''));
     BRANDS.forEach(b => brandFilter.add(new Option(b, b)));
   }
+
+  // ---------- 클레임 등록(임시 저장) ----------
+  const PENDING_KEY = 'claim_pending_queue';
+  const registerModal = document.getElementById('registerModal');
+  const openRegisterBtn = document.getElementById('openRegister');
+  const cancelRegisterBtn = document.getElementById('cancelRegister');
+  const registerForm = document.getElementById('registerForm');
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const fileChipsEl = document.getElementById('fileChips');
+  const fBrand = document.getElementById('fBrand');
+  const fVendor = document.getElementById('fVendor');
+  const pendingBanner = document.getElementById('pendingBanner');
+  const pendingList = document.getElementById('pendingList');
+  const copyAllBtn = document.getElementById('copyAllPending');
+
+  let pendingFiles = [];
+
+  function loadPending() {
+    try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function savePending(list) {
+    try { localStorage.setItem(PENDING_KEY, JSON.stringify(list)); } catch (e) {
+      alert('저장 공간이 부족해요. 사진 크기를 줄이거나 항목 수를 줄여주세요.');
+    }
+  }
+
+  function fillModalSelects() {
+    fBrand.innerHTML = '';
+    BRANDS.forEach(b => fBrand.add(new Option(b, b)));
+    fVendor.innerHTML = '';
+    VENDORS.forEach(v => fVendor.add(new Option(v, v)));
+  }
+
+  function openModal() {
+    fillModalSelects();
+    registerForm.reset();
+    pendingFiles = [];
+    renderFileChips();
+    registerModal.hidden = false;
+  }
+  function closeModal() { registerModal.hidden = true; }
+
+  openRegisterBtn.addEventListener('click', openModal);
+  cancelRegisterBtn.addEventListener('click', closeModal);
+  registerModal.addEventListener('click', e => { if (e.target === registerModal) closeModal(); });
+
+  function resizeImage(file, maxDim, quality) {
+    return new Promise(resolve => {
+      const img = new Image();
+      const reader = new FileReader();
+      reader.onload = e => { img.src = e.target.result; };
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height && width > maxDim) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+        else if (height > maxDim) { width = Math.round(width * (maxDim / height)); height = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = width; canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function addFiles(fileList) {
+    for (const file of Array.from(fileList)) {
+      if (file.type === 'application/pdf') {
+        pendingFiles.push({ name: file.name, size: file.size, type: 'pdf', thumb: null });
+      } else if (file.type.startsWith('image/')) {
+        const thumb = await resizeImage(file, 640, 0.72);
+        pendingFiles.push({ name: file.name, size: file.size, type: 'image', thumb });
+      }
+    }
+    renderFileChips();
+  }
+
+  function renderFileChips() {
+    fileChipsEl.innerHTML = pendingFiles.map((f, i) => `
+      <span class="filechip">
+        ${f.type === 'image' ? `<img src="${f.thumb}" alt="">` : `<span class="pdfmark">PDF</span>`}
+        <span class="fname">${escapeHtml(f.name)}</span>
+        <button type="button" data-i="${i}" aria-label="첨부 제거">✕</button>
+      </span>
+    `).join('');
+    fileChipsEl.querySelectorAll('button[data-i]').forEach(btn => {
+      btn.addEventListener('click', () => { pendingFiles.splice(Number(btn.dataset.i), 1); renderFileChips(); });
+    });
+  }
+
+  dropzone.addEventListener('click', () => fileInput.click());
+  dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
+  fileInput.addEventListener('change', () => addFiles(fileInput.files));
+  ['dragover', 'dragenter'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
+  dropzone.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
+
+  registerForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const vendor = fVendor.value;
+    const entry = {
+      id: 'p' + Date.now(),
+      category: document.getElementById('fCategory').value.trim(),
+      type: document.getElementById('fType').value.trim(),
+      brand: fBrand.value,
+      vendor,
+      source: `외주(${vendor})`,
+      code: document.getElementById('fCode').value.trim(),
+      color: document.getElementById('fColor').value.trim(),
+      lotOn: document.getElementById('fLot').value.trim(),
+      supply: document.getElementById('fSupply').value.trim(),
+      defect: document.getElementById('fDefect').value.trim(),
+      files: pendingFiles.map(f => ({ name: f.name, type: f.type })),
+      createdAt: new Date().toISOString()
+    };
+    const list = loadPending();
+    list.push(entry);
+    savePending(list);
+    closeModal();
+    renderPending();
+    alert('임시 저장했어요. 아래 노란 안내창의 "전체 내용 복사"로 내용을 복사해 사진과 함께 담당자에게 전달해 주세요.');
+  });
+
+  function pendingEntryText(p) {
+    const fileNote = p.files.length ? `첨부파일: ${p.files.map(f => f.name).join(', ')} (사진 원본은 별도로 함께 전달해주세요)` : '첨부파일 없음';
+    return [
+      `구분: ${p.category}`, `유형: ${p.type}`, `브랜드: ${p.brand}`, `원인처: ${p.source}`,
+      `제품코드: ${p.code}`, `색상: ${p.color}`, `LOT ON: ${p.lotOn}`, `공급: ${p.supply}`,
+      `하자내역: ${p.defect}`, fileNote
+    ].join('\n');
+  }
+
+  function renderPending() {
+    const list = loadPending();
+    pendingBanner.hidden = list.length === 0;
+    pendingList.innerHTML = list.map(p => `
+      <div class="pending-item">
+        <div>
+          <div>${escapeHtml(p.brand)} · <span class="tag" style="--hue:${hueOf(p.vendor)}">${escapeHtml(p.source)}</span> · ${escapeHtml(p.code || '(코드 없음)')}</div>
+          <div class="meta">${escapeHtml(p.defect || '')}</div>
+        </div>
+        <div class="row-actions">
+          <button type="button" data-copy="${p.id}">복사</button>
+          <button type="button" data-del="${p.id}">삭제</button>
+        </div>
+      </div>
+    `).join('');
+    pendingList.querySelectorAll('button[data-copy]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = list.find(x => x.id === btn.dataset.copy);
+        navigator.clipboard?.writeText(pendingEntryText(p)).then(() => { btn.textContent = '복사됨!'; setTimeout(() => btn.textContent = '복사', 1200); });
+      });
+    });
+    pendingList.querySelectorAll('button[data-del]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const next = loadPending().filter(x => x.id !== btn.dataset.del);
+        savePending(next);
+        renderPending();
+      });
+    });
+  }
+
+  copyAllBtn.addEventListener('click', () => {
+    const list = loadPending();
+    const text = list.map((p, i) => `[${i + 1}]\n${pendingEntryText(p)}`).join('\n\n');
+    navigator.clipboard?.writeText(text).then(() => { copyAllBtn.textContent = '복사됨!'; setTimeout(() => copyAllBtn.textContent = '전체 내용 복사', 1200); });
+  });
 
   function setVendor(v) {
     vendorSelect.value = v;
@@ -642,6 +1057,7 @@
   buildVendorOptions();
   buildBrandOptions();
   render();
+  renderPending();
 </script>
 </body>
 </html>
