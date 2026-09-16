@@ -555,6 +555,40 @@
     border: 1px solid var(--border); background: var(--surface-alt); color: var(--ink);
     font: inherit; font-size: 0.75rem; padding: 5px 9px; border-radius: 6px; cursor: pointer;
   }
+
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: var(--bg);
+    padding: 11px 20px; border-radius: 999px;
+    font-size: 0.86rem; font-weight: 500;
+    box-shadow: var(--shadow);
+    z-index: 80;
+  }
+  .toast[hidden] { display: none; }
+  .toast.error { background: var(--danger); color: #fff; }
+
+  .imgcount {
+    position: absolute; bottom: -3px; right: -3px;
+    background: var(--accent); color: var(--accent-ink);
+    font-size: 0.62rem; font-weight: 700;
+    border-radius: 999px; padding: 1px 5px;
+    line-height: 1.3;
+  }
+  .thumb { position: relative; }
+  .pdflink {
+    width: 56px; height: 56px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--danger-soft); color: var(--danger);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.65rem; font-weight: 700; text-decoration: none;
+  }
+
+  .status-pill {
+    border: 1px solid var(--pill-color, var(--border));
+    background: color-mix(in srgb, var(--pill-color, var(--ink-faint)) 14%, var(--surface));
+    color: var(--pill-color, var(--ink));
+    font: inherit; font-weight: 600; font-size: 0.78rem;
+    padding: 5px 10px; border-radius: 999px; cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -588,17 +622,6 @@
 
 <div class="chiprow" id="chipRow"></div>
 
-<div class="pending-banner" id="pendingBanner" hidden>
-  <div class="pending-head">
-    <div>
-      <strong>⏳ 아직 반영되지 않은 등록건</strong>
-      <p>이 브라우저에만 임시로 저장돼 있어요. 아래 "복사"로 내용을 복사해 사진과 함께 담당자(클로드)에게 전달하면 실제 대시보드에 반영됩니다.</p>
-    </div>
-    <button type="button" class="btn-ghost" id="copyAllPending">전체 내용 복사</button>
-  </div>
-  <div class="pending-list" id="pendingList"></div>
-</div>
-
 <div class="stats" id="stats"></div>
 
 <div class="toolbar">
@@ -620,6 +643,7 @@
         <th>공급</th>
         <th>하자내역</th>
         <th>이미지</th>
+        <th>처리상태</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -646,7 +670,7 @@
 <div class="modal-overlay" id="registerModal" hidden>
   <div class="modal-card">
     <h2>클레임 등록</h2>
-    <p class="modal-sub">입력한 내용은 이 브라우저에만 임시 저장돼요. 저장 후 뜨는 안내에 따라 담당자에게 전달해 주세요.</p>
+    <p class="modal-sub">저장하면 대시보드를 보는 모든 사람에게 바로 반영됩니다.</p>
     <form id="registerForm">
       <div class="form-grid">
         <div class="field">
@@ -681,6 +705,10 @@
           <label for="fSupply">공급</label>
           <input id="fSupply" type="text" placeholder="예: (벽고정)_정찬숙(차)">
         </div>
+        <div class="field">
+          <label for="fStatus">처리상태</label>
+          <select id="fStatus"></select>
+        </div>
         <div class="field full">
           <label for="fDefect">하자내역</label>
           <textarea id="fDefect" placeholder="하자 내용을 적어주세요"></textarea>
@@ -696,12 +724,16 @@
 
       <div class="modal-actions">
         <button type="button" class="btn-ghost" id="cancelRegister">취소</button>
-        <button type="submit" class="btn-primary">저장</button>
+        <button type="submit" class="btn-primary" id="submitRegister">저장</button>
       </div>
     </form>
   </div>
 </div>
 
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
   // 업체 목록(가나다 순) — 새 업체가 생기면 여기에 추가하고 아래 VENDOR_HUE에도 색을 지정해 주세요
   const VENDORS = ["가온", "금용", "송아", "에픽", "엘에스에프", "올품", "유진", "정운", "제일", "진산"];
@@ -716,23 +748,25 @@
   // 브랜드 목록 — 새 브랜드가 생기면 여기에 추가
   const BRANDS = ["퍼시스", "일룸", "데스커", "시디즈", "알로소", "슬로우베드"];
 
-  // 클레임 데이터 — 담당자가 새 항목을 전달하면 이 배열에 추가됩니다
-  const CLAIMS = [
-    {
-      id: 9,
-      category: "고객불만",
-      type: "자재",
-      brand: "일룸",
-      vendor: "제일",
-      source: "외주(제일)",
-      code: "IHS14CP06A",
-      color: "WW",
-      lotOn: "2026.08.27 J",
-      supply: "(벽고정)_정찬숙(차)",
-      defect: "전선캡 커버 누락",
-      image: null
-    }
-  ];
+  // 클레임 데이터 — Firebase 실시간 데이터베이스에서 불러옵니다 (아래 Firebase 섹션 참고)
+  let CLAIMS = [];
+  const SEED_CLAIM = {
+    category: "고객불만",
+    type: "자재",
+    brand: "일룸",
+    vendor: "제일",
+    source: "외주(제일)",
+    code: "IHS14CP06A",
+    color: "WW",
+    lotOn: "2026.08.27 J",
+    supply: "(벽고정)_정찬숙(차)",
+    defect: "전선캡 커버 누락",
+    images: [],
+    status: "진행중",
+    createdAt: new Date().toISOString()
+  };
+  const STATUS_LIST = ["진행중", "지연", "완료"];
+  const STATUS_COLOR = { "진행중": "var(--accent)", "지연": "var(--danger)", "완료": "var(--accent-2)" };
 
   const vendorSelect = document.getElementById('vendorSelect');
   const brandFilter = document.getElementById('brandFilter');
@@ -768,37 +802,69 @@
     BRANDS.forEach(b => brandFilter.add(new Option(b, b)));
   }
 
-  // ---------- 클레임 등록(임시 저장) ----------
-  const PENDING_KEY = 'claim_pending_queue';
+  // ---------- Firebase (실시간 공유 저장소) ----------
+  // claim-dashboard 프로젝트와 같은 Firebase 프로젝트를 재사용하되, 이 대시보드 전용 경로만 씁니다.
+  const firebaseConfig = {
+    apiKey: "AIzaSyD3nS7b5hGJKXDeeuT50C9xlxenTceCASk",
+    authDomain: "experiment-dashboard-50db5.firebaseapp.com",
+    databaseURL: "https://experiment-dashboard-50db5-default-rtdb.firebaseio.com",
+    projectId: "experiment-dashboard-50db5",
+    storageBucket: "experiment-dashboard-50db5.firebasestorage.app",
+    messagingSenderId: "807748487712",
+    appId: "1:807748487712:web:bbb10a9f35564da1a88a45"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const fbDb = firebase.database();
+  const CLAIMS_PATH = 'outsourcing_claims/claims';
+  const MAX_FILE_BYTES = 1.5 * 1024 * 1024; // 결제 없는 무료 DB 저장이라 파일당 용량을 제한합니다
+
+  let fbReady = false;
+  fbDb.ref(CLAIMS_PATH).on('value', snap => {
+    const val = snap.val();
+    if (!val) {
+      if (!fbReady) { fbDb.ref(CLAIMS_PATH).push(SEED_CLAIM); }
+      fbReady = true;
+      return;
+    }
+    fbReady = true;
+    CLAIMS = Object.keys(val).map(id => ({ id, ...val[id] }));
+    render();
+  }, err => {
+    console.error('Firebase 연결 실패', err);
+    showToast('실시간 데이터를 불러오지 못했어요. 새로고침해 보세요.', true);
+  });
+
+  function showToast(msg, isError) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className = 'toast' + (isError ? ' error' : '');
+    t.hidden = false;
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => { t.hidden = true; }, 3200);
+  }
+
+  // ---------- 클레임 등록 ----------
   const registerModal = document.getElementById('registerModal');
   const openRegisterBtn = document.getElementById('openRegister');
   const cancelRegisterBtn = document.getElementById('cancelRegister');
   const registerForm = document.getElementById('registerForm');
+  const submitBtn = document.getElementById('submitRegister');
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
   const fileChipsEl = document.getElementById('fileChips');
   const fBrand = document.getElementById('fBrand');
   const fVendor = document.getElementById('fVendor');
-  const pendingBanner = document.getElementById('pendingBanner');
-  const pendingList = document.getElementById('pendingList');
-  const copyAllBtn = document.getElementById('copyAllPending');
 
   let pendingFiles = [];
 
-  function loadPending() {
-    try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch (e) { return []; }
-  }
-  function savePending(list) {
-    try { localStorage.setItem(PENDING_KEY, JSON.stringify(list)); } catch (e) {
-      alert('저장 공간이 부족해요. 사진 크기를 줄이거나 항목 수를 줄여주세요.');
-    }
-  }
-
+  const fStatus = document.getElementById('fStatus');
   function fillModalSelects() {
     fBrand.innerHTML = '';
     BRANDS.forEach(b => fBrand.add(new Option(b, b)));
     fVendor.innerHTML = '';
     VENDORS.forEach(v => fVendor.add(new Option(v, v)));
+    fStatus.innerHTML = '';
+    STATUS_LIST.forEach(s => fStatus.add(new Option(s, s)));
   }
 
   function openModal() {
@@ -832,13 +898,27 @@
     });
   }
 
+  function readAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function addFiles(fileList) {
     for (const file of Array.from(fileList)) {
       if (file.type === 'application/pdf') {
-        pendingFiles.push({ name: file.name, size: file.size, type: 'pdf', thumb: null });
+        if (file.size > MAX_FILE_BYTES) {
+          showToast(`"${file.name}" 파일이 너무 커요 (1.5MB 이하만 첨부 가능).`, true);
+          continue;
+        }
+        const dataUrl = await readAsDataUrl(file);
+        pendingFiles.push({ name: file.name, size: file.size, type: 'pdf', thumb: null, dataUrl });
       } else if (file.type.startsWith('image/')) {
-        const thumb = await resizeImage(file, 640, 0.72);
-        pendingFiles.push({ name: file.name, size: file.size, type: 'image', thumb });
+        const dataUrl = await resizeImage(file, 640, 0.72);
+        pendingFiles.push({ name: file.name, size: file.size, type: 'image', thumb: dataUrl, dataUrl });
       }
     }
     renderFileChips();
@@ -864,75 +944,38 @@
   ['dragleave', 'drop'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
   dropzone.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
 
-  registerForm.addEventListener('submit', e => {
+  registerForm.addEventListener('submit', async e => {
     e.preventDefault();
     const vendor = fVendor.value;
-    const entry = {
-      id: 'p' + Date.now(),
-      category: document.getElementById('fCategory').value.trim(),
-      type: document.getElementById('fType').value.trim(),
-      brand: fBrand.value,
-      vendor,
-      source: `외주(${vendor})`,
-      code: document.getElementById('fCode').value.trim(),
-      color: document.getElementById('fColor').value.trim(),
-      lotOn: document.getElementById('fLot').value.trim(),
-      supply: document.getElementById('fSupply').value.trim(),
-      defect: document.getElementById('fDefect').value.trim(),
-      files: pendingFiles.map(f => ({ name: f.name, type: f.type })),
-      createdAt: new Date().toISOString()
-    };
-    const list = loadPending();
-    list.push(entry);
-    savePending(list);
-    closeModal();
-    renderPending();
-    alert('임시 저장했어요. 아래 노란 안내창의 "전체 내용 복사"로 내용을 복사해 사진과 함께 담당자에게 전달해 주세요.');
-  });
-
-  function pendingEntryText(p) {
-    const fileNote = p.files.length ? `첨부파일: ${p.files.map(f => f.name).join(', ')} (사진 원본은 별도로 함께 전달해주세요)` : '첨부파일 없음';
-    return [
-      `구분: ${p.category}`, `유형: ${p.type}`, `브랜드: ${p.brand}`, `원인처: ${p.source}`,
-      `제품코드: ${p.code}`, `색상: ${p.color}`, `LOT ON: ${p.lotOn}`, `공급: ${p.supply}`,
-      `하자내역: ${p.defect}`, fileNote
-    ].join('\n');
-  }
-
-  function renderPending() {
-    const list = loadPending();
-    pendingBanner.hidden = list.length === 0;
-    pendingList.innerHTML = list.map(p => `
-      <div class="pending-item">
-        <div>
-          <div>${escapeHtml(p.brand)} · <span class="tag" style="--hue:${hueOf(p.vendor)}">${escapeHtml(p.source)}</span> · ${escapeHtml(p.code || '(코드 없음)')}</div>
-          <div class="meta">${escapeHtml(p.defect || '')}</div>
-        </div>
-        <div class="row-actions">
-          <button type="button" data-copy="${p.id}">복사</button>
-          <button type="button" data-del="${p.id}">삭제</button>
-        </div>
-      </div>
-    `).join('');
-    pendingList.querySelectorAll('button[data-copy]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const p = list.find(x => x.id === btn.dataset.copy);
-        navigator.clipboard?.writeText(pendingEntryText(p)).then(() => { btn.textContent = '복사됨!'; setTimeout(() => btn.textContent = '복사', 1200); });
-      });
-    });
-    pendingList.querySelectorAll('button[data-del]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const next = loadPending().filter(x => x.id !== btn.dataset.del);
-        savePending(next);
-        renderPending();
-      });
-    });
-  }
-
-  copyAllBtn.addEventListener('click', () => {
-    const list = loadPending();
-    const text = list.map((p, i) => `[${i + 1}]\n${pendingEntryText(p)}`).join('\n\n');
-    navigator.clipboard?.writeText(text).then(() => { copyAllBtn.textContent = '복사됨!'; setTimeout(() => copyAllBtn.textContent = '전체 내용 복사', 1200); });
+    submitBtn.disabled = true;
+    submitBtn.textContent = '저장 중...';
+    try {
+      const images = pendingFiles.map(pf => ({ url: pf.dataUrl, name: pf.name, type: pf.type }));
+      const entry = {
+        category: document.getElementById('fCategory').value.trim(),
+        type: document.getElementById('fType').value.trim(),
+        brand: fBrand.value,
+        vendor,
+        source: `외주(${vendor})`,
+        code: document.getElementById('fCode').value.trim(),
+        color: document.getElementById('fColor').value.trim(),
+        lotOn: document.getElementById('fLot').value.trim(),
+        supply: document.getElementById('fSupply').value.trim(),
+        status: fStatus.value,
+        defect: document.getElementById('fDefect').value.trim(),
+        images,
+        createdAt: new Date().toISOString()
+      };
+      await fbDb.ref(CLAIMS_PATH).push(entry);
+      closeModal();
+      showToast('등록 완료! 모두에게 바로 반영됐어요.');
+    } catch (err) {
+      console.error(err);
+      showToast('저장에 실패했어요. 담당자에게 문의해 주세요. (' + (err?.code || err?.message || '알 수 없는 오류') + ')', true);
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '저장';
+    }
   });
 
   function setVendor(v) {
@@ -960,6 +1003,25 @@
 
   function placeholderThumb() {
     return '<span class="thumb" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 17 5-5 4 4 3-3 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
+  }
+
+  function imageCell(c) {
+    const images = c.images || [];
+    if (images.length === 0) return placeholderThumb();
+    const firstImg = images.find(f => f.type === 'image');
+    if (firstImg) {
+      const extra = images.length > 1 ? `<span class="imgcount">+${images.length - 1}</span>` : '';
+      return `<button class="thumb" data-id="${c.id}"><img src="${escapeHtml(firstImg.url)}" alt="${escapeHtml(c.defect)} 사진">${extra}</button>`;
+    }
+    const pdf = images[0];
+    return `<a class="pdflink" href="${escapeHtml(pdf.url)}" target="_blank" rel="noopener">PDF</a>`;
+  }
+
+  function statusCell(c) {
+    const status = c.status || '진행중';
+    const color = STATUS_COLOR[status] || 'var(--ink-faint)';
+    const opts = STATUS_LIST.map(s => `<option value="${s}" ${s === status ? 'selected' : ''}>${s}</option>`).join('');
+    return `<select class="status-pill" data-status-id="${c.id}" style="--pill-color:${color}">${opts}</select>`;
   }
 
   function render() {
@@ -990,36 +1052,45 @@
         <td data-label="LOT ON" class="mono">${escapeHtml(c.lotOn)}</td>
         <td data-label="공급">${escapeHtml(c.supply)}</td>
         <td data-label="하자내역" class="defect">${escapeHtml(c.defect)}</td>
-        <td data-label="이미지" class="imgcell">${
-          c.image
-            ? `<button class="thumb" data-id="${c.id}"><img src="${escapeHtml(c.image)}" alt="${escapeHtml(c.defect)} 사진"></button>`
-            : placeholderThumb()
-        }</td>
+        <td data-label="이미지" class="imgcell">${imageCell(c)}</td>
+        <td data-label="처리상태">${statusCell(c)}</td>
       </tr>
     `).join('');
+
+    tbody.querySelectorAll('select[data-status-id]').forEach(sel => {
+      sel.addEventListener('change', () => {
+        fbDb.ref(`${CLAIMS_PATH}/${sel.dataset.statusId}/status`).set(sel.value)
+          .catch(err => showToast('상태 변경 실패: ' + (err?.message || ''), true));
+      });
+    });
 
     emptyState.hidden = rows.length !== 0;
     document.getElementById('dataTable').style.display = rows.length === 0 ? 'none' : '';
 
-    const brandCount = new Set(rows.map(r => r.brand)).size;
-    const vendorCount = new Set(rows.map(r => r.vendor)).size;
-    const latest = rows.slice().sort((a, b) => String(b.lotOn).localeCompare(String(a.lotOn)))[0];
+    const inProgress = rows.filter(r => (r.status || '진행중') === '진행중').length;
+    const delayed = rows.filter(r => r.status === '지연').length;
+    const done = rows.filter(r => r.status === '완료').length;
+    const doneRate = rows.length ? Math.round((done / rows.length) * 100) : 0;
     statsEl.innerHTML = `
       <div class="stat" style="--stat-color:var(--accent)">
-        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg>표시 중인 건수</div>
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg>전체 클레임</div>
         <div class="num mono">${rows.length}</div>
-      </div>
-      <div class="stat" style="--stat-color:var(--accent-2)">
-        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>전체 등록 건수</div>
-        <div class="num mono">${CLAIMS.length}</div>
+        <div class="label">누적 등록 건수</div>
       </div>
       <div class="stat" style="--stat-color:var(--warn)">
-        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/></svg>관련 업체 수</div>
-        <div class="num mono">${vendorCount}</div>
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg>진행중</div>
+        <div class="num mono">${inProgress}</div>
+        <div class="label">개선대책서 작성 중</div>
       </div>
       <div class="stat" style="--stat-color:var(--danger)">
-        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 7v5l3 3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="8.5"/></svg>최근 LOT ON</div>
-        <div class="num mono" style="font-size:1.15rem">${latest ? escapeHtml(latest.lotOn) : '—'}</div>
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 9v4M12 17h.01" stroke-linecap="round"/><circle cx="12" cy="12" r="8.5"/></svg>지연</div>
+        <div class="num mono">${delayed}</div>
+        <div class="label">지연으로 표시된 건</div>
+      </div>
+      <div class="stat" style="--stat-color:var(--accent-2)">
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>완료율</div>
+        <div class="num mono">${doneRate}%</div>
+        <div class="label">개선대책서 작성 완료 기준</div>
       </div>
     `;
 
@@ -1030,8 +1101,9 @@
     const btn = e.target.closest('button.thumb[data-id]');
     if (!btn) return;
     const c = CLAIMS.find(x => String(x.id) === btn.dataset.id);
-    if (!c || !c.image) return;
-    document.getElementById('lightboxImg').src = c.image;
+    const firstImg = (c?.images || []).find(f => f.type === 'image');
+    if (!firstImg) return;
+    document.getElementById('lightboxImg').src = firstImg.url;
     document.getElementById('lightboxCode').textContent = `${c.code} / ${c.color}`;
     document.getElementById('lightboxDefect').textContent = c.defect;
     document.getElementById('lightbox').hidden = false;
@@ -1057,7 +1129,6 @@
   buildVendorOptions();
   buildBrandOptions();
   render();
-  renderPending();
 </script>
 </body>
 </html>
