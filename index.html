@@ -562,13 +562,6 @@
     font-size: 0.65rem; font-weight: 700; text-decoration: none;
   }
 
-  .status-pill {
-    border: 1px solid var(--pill-color, var(--border));
-    background: color-mix(in srgb, var(--pill-color, var(--ink-faint)) 14%, var(--surface));
-    color: var(--pill-color, var(--ink));
-    font: inherit; font-weight: 600; font-size: 0.78rem;
-    padding: 5px 10px; border-radius: 999px; cursor: pointer;
-  }
   .manage-cell { display: flex; gap: 6px; }
   .manage-btn {
     border: 1px solid var(--border); background: var(--surface-alt); color: var(--ink);
@@ -619,7 +612,6 @@
   <table id="dataTable">
     <thead>
       <tr>
-        <th>처리상태</th>
         <th>발생일</th>
         <th>구분</th>
         <th>유형</th>
@@ -693,10 +685,6 @@
           <input id="fSupply" type="text" placeholder="예: (벽고정)_정찬숙(차)">
         </div>
         <div class="field">
-          <label for="fStatus">처리상태</label>
-          <select id="fStatus"></select>
-        </div>
-        <div class="field">
           <label for="fOccurred">발생일</label>
           <input id="fOccurred" type="date">
         </div>
@@ -708,7 +696,7 @@
 
       <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="사진 또는 PDF 첨부">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <div><strong>클릭</strong>하거나 사진/PDF 파일을 여기로 <strong>드래그</strong>해서 첨부하세요</div>
+        <div><strong>클릭</strong>하거나 <strong>드래그</strong>, 또는 이미지 복사 후 <strong>Ctrl+V</strong>로 붙여넣어 첨부하세요</div>
         <input type="file" id="fileInput" accept="image/*,application/pdf" multiple hidden>
       </div>
       <div class="filechips" id="fileChips"></div>
@@ -753,12 +741,9 @@
     supply: "(벽고정)_정찬숙(차)",
     defect: "전선캡 커버 누락",
     images: [],
-    status: "진행중",
     occurredAt: "2026-08-27",
     createdAt: new Date().toISOString()
   };
-  const STATUS_LIST = ["진행중", "지연", "완료"];
-  const STATUS_COLOR = { "진행중": "var(--warn)", "지연": "var(--danger)", "완료": "var(--accent-2)" };
 
   const vendorSelect = document.getElementById('vendorSelect');
   const brandFilter = document.getElementById('brandFilter');
@@ -849,14 +834,11 @@
 
   let pendingFiles = [];
 
-  const fStatus = document.getElementById('fStatus');
   function fillModalSelects() {
     fBrand.innerHTML = '';
     BRANDS.forEach(b => fBrand.add(new Option(b, b)));
     fVendor.innerHTML = '';
     VENDORS.forEach(v => fVendor.add(new Option(v, v)));
-    fStatus.innerHTML = '';
-    STATUS_LIST.forEach(s => fStatus.add(new Option(s, s)));
   }
 
   let editingId = null;
@@ -877,7 +859,6 @@
       document.getElementById('fColor').value = claim.color || '';
       document.getElementById('fLot').value = claim.lotOn || '';
       document.getElementById('fSupply').value = claim.supply || '';
-      fStatus.value = claim.status || '진행중';
       document.getElementById('fOccurred').value = claim.occurredAt || '';
       document.getElementById('fDefect').value = claim.defect || '';
       pendingFiles = (claim.images || []).map(img => ({
@@ -963,6 +944,20 @@
   ['dragleave', 'drop'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
   dropzone.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
 
+  document.addEventListener('paste', e => {
+    if (registerModal.hidden) return;
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    const files = [];
+    for (const item of items) {
+      if (item.kind === 'file' && item.type.startsWith('image/')) {
+        const file = item.getAsFile();
+        if (file) files.push(file);
+      }
+    }
+    if (files.length) { e.preventDefault(); addFiles(files); }
+  });
+
   registerForm.addEventListener('submit', async e => {
     e.preventDefault();
     const vendor = fVendor.value;
@@ -980,7 +975,6 @@
         color: document.getElementById('fColor').value.trim(),
         lotOn: document.getElementById('fLot').value.trim(),
         supply: document.getElementById('fSupply').value.trim(),
-        status: fStatus.value,
         occurredAt: document.getElementById('fOccurred').value,
         defect: document.getElementById('fDefect').value.trim(),
         images,
@@ -1042,13 +1036,6 @@
     return `<a class="pdflink" href="${escapeHtml(pdf.url)}" target="_blank" rel="noopener">PDF</a>`;
   }
 
-  function statusCell(c) {
-    const status = c.status || '진행중';
-    const color = STATUS_COLOR[status] || 'var(--ink-faint)';
-    const opts = STATUS_LIST.map(s => `<option value="${s}" ${s === status ? 'selected' : ''}>${s}</option>`).join('');
-    return `<select class="status-pill" data-status-id="${c.id}" style="--pill-color:${color}">${opts}</select>`;
-  }
-
   function render() {
     const vendor = vendorSelect.value;
     const brand = brandFilter.value;
@@ -1068,7 +1055,6 @@
 
     tbody.innerHTML = rows.map((c, i) => `
       <tr style="--i:${i}">
-        <td data-label="처리상태">${statusCell(c)}</td>
         <td data-label="발생일" class="mono">${escapeHtml(c.occurredAt)}</td>
         <td data-label="구분">${escapeHtml(c.category)}</td>
         <td data-label="유형">${escapeHtml(c.type)}</td>
@@ -1087,12 +1073,6 @@
       </tr>
     `).join('');
 
-    tbody.querySelectorAll('select[data-status-id]').forEach(sel => {
-      sel.addEventListener('change', () => {
-        fbDb.ref(`${CLAIMS_PATH}/${sel.dataset.statusId}/status`).set(sel.value)
-          .catch(err => showToast('상태 변경 실패: ' + (err?.message || ''), true));
-      });
-    });
     tbody.querySelectorAll('button[data-del-id]').forEach(btn => {
       btn.addEventListener('click', () => {
         if (!confirm('이 클레임 항목을 삭제할까요? 되돌릴 수 없어요.')) return;
@@ -1111,10 +1091,9 @@
     emptyState.hidden = rows.length !== 0;
     document.getElementById('dataTable').style.display = rows.length === 0 ? 'none' : '';
 
-    const inProgress = rows.filter(r => (r.status || '진행중') === '진행중').length;
-    const delayed = rows.filter(r => r.status === '지연').length;
-    const done = rows.filter(r => r.status === '완료').length;
-    const doneRate = rows.length ? Math.round((done / rows.length) * 100) : 0;
+    const brandCount = new Set(rows.map(r => r.brand)).size;
+    const vendorCount = new Set(rows.map(r => r.vendor)).size;
+    const latest = rows.slice().filter(r => r.occurredAt).sort((a, b) => String(b.occurredAt).localeCompare(String(a.occurredAt)))[0];
     statsEl.innerHTML = `
       <div class="stat" style="--stat-color:var(--accent)">
         <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 6h16M4 12h16M4 18h10" stroke-linecap="round"/></svg>전체 클레임</div>
@@ -1122,19 +1101,19 @@
         <div class="label">누적 등록 건수</div>
       </div>
       <div class="stat" style="--stat-color:var(--warn)">
-        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2" stroke-linecap="round"/></svg>진행중</div>
-        <div class="num mono">${inProgress}</div>
-        <div class="label">개선대책서 작성 중</div>
-      </div>
-      <div class="stat" style="--stat-color:var(--danger)">
-        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 9v4M12 17h.01" stroke-linecap="round"/><circle cx="12" cy="12" r="8.5"/></svg>지연</div>
-        <div class="num mono">${delayed}</div>
-        <div class="label">지연으로 표시된 건</div>
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="8"/></svg>관련 업체 수</div>
+        <div class="num mono">${vendorCount}</div>
+        <div class="label">등록된 외주업체 수</div>
       </div>
       <div class="stat" style="--stat-color:var(--accent-2)">
-        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M20 6 9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg>완료율</div>
-        <div class="num mono">${doneRate}%</div>
-        <div class="label">개선대책서 작성 완료 기준</div>
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="4" width="16" height="16" rx="3"/></svg>관련 브랜드 수</div>
+        <div class="num mono">${brandCount}</div>
+        <div class="label">등록된 브랜드 수</div>
+      </div>
+      <div class="stat" style="--stat-color:var(--danger)">
+        <div class="head"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 7v5l3 3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="8.5"/></svg>최근 발생일</div>
+        <div class="num mono" style="font-size:1.15rem">${latest ? escapeHtml(latest.occurredAt) : '—'}</div>
+        <div class="label">가장 최근 발생 건</div>
       </div>
     `;
 
