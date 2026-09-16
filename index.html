@@ -678,11 +678,11 @@
       <div class="form-grid">
         <div class="field">
           <label for="fCategory">구분</label>
-          <input id="fCategory" type="text" placeholder="예: 고객불만" required>
+          <select id="fCategory"></select>
         </div>
         <div class="field">
           <label for="fType">유형</label>
-          <input id="fType" type="text" placeholder="예: 자재">
+          <select id="fType"></select>
         </div>
         <div class="field">
           <label for="fBrand">브랜드</label>
@@ -750,6 +750,10 @@
 
   // 브랜드 목록 — 새 브랜드가 생기면 여기에 추가
   const BRANDS = ["퍼시스", "일룸", "데스커", "시디즈", "알로소", "슬로우베드"];
+
+  // 구분 / 유형 목록
+  const CATEGORIES = ["고객불만", "시공미결"];
+  const TYPES = ["자재", "외관", "포장", "가공"];
 
   // 클레임 데이터 — Firebase 실시간 데이터베이스에서 불러옵니다 (아래 Firebase 섹션 참고)
   let CLAIMS = [];
@@ -858,11 +862,17 @@
 
   let pendingFiles = [];
 
+  const fCategory = document.getElementById('fCategory');
+  const fType = document.getElementById('fType');
   function fillModalSelects() {
     fBrand.innerHTML = '';
     BRANDS.forEach(b => fBrand.add(new Option(b, b)));
     fVendor.innerHTML = '';
     VENDORS.forEach(v => fVendor.add(new Option(v, v)));
+    fCategory.innerHTML = '';
+    CATEGORIES.forEach(c => fCategory.add(new Option(c, c)));
+    fType.innerHTML = '';
+    TYPES.forEach(t => fType.add(new Option(t, t)));
   }
 
   let editingId = null;
