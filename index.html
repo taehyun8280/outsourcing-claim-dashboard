@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>외주 클레임 대시보드</title>
+<title>외주 고객클레임 관리</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #eef1f6;
@@ -86,7 +86,7 @@
       repeating-linear-gradient(90deg, var(--grid-line) 0 1px, transparent 1px 28px),
       var(--bg);
     color: var(--ink);
-    font-family: "IBM Plex Sans KR", "Malgun Gothic", sans-serif;
+    font-family: "Gowun Dodum", "Malgun Gothic", sans-serif;
     padding-inline: 20px;
     padding-block: 30px 60px;
     max-width: 1220px;
@@ -398,26 +398,6 @@
     gap: 14px;
     margin-bottom: 16px;
   }
-  .logo-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: #14203a;
-    color: #ffffff;
-    font-weight: 700;
-    font-size: 0.95rem;
-    letter-spacing: 0.03em;
-    padding: 9px 14px;
-    border-radius: 8px;
-    flex-shrink: 0;
-    box-shadow: var(--shadow);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .logo-badge { background: #eef1f6; color: #14203a; }
-  }
-  :root[data-theme="dark"] .logo-badge { background: #eef1f6; color: #14203a; }
-  .brandbar .divider { width: 1px; height: 30px; background: var(--border); flex-shrink: 0; }
-
   header.top { align-items: center; }
   .actions-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
@@ -589,16 +569,22 @@
     font: inherit; font-weight: 600; font-size: 0.78rem;
     padding: 5px 10px; border-radius: 999px; cursor: pointer;
   }
+  .status-row { display: flex; align-items: center; gap: 6px; }
+  .del-btn {
+    border: 1px solid var(--border); background: var(--surface-alt); color: var(--ink-faint);
+    width: 26px; height: 26px; border-radius: 6px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .del-btn:hover { color: var(--danger); border-color: var(--danger); }
+  .del-btn svg { width: 14px; height: 14px; }
 </style>
 </head>
 <body>
 
 <div class="brandbar">
-  <span class="logo-badge">FURSYS</span>
-  <span class="divider"></span>
   <div>
     <span class="eyebrow">협력사 품질관리</span>
-    <h1 style="margin:2px 0 0;font-size:1.3rem;">외주 클레임 대시보드</h1>
+    <h1 style="margin:2px 0 0;font-size:1.3rem;">외주 고객클레임 관리</h1>
   </div>
 </div>
 
@@ -633,17 +619,17 @@
   <table id="dataTable">
     <thead>
       <tr>
+        <th>처리상태</th>
         <th>구분</th>
         <th>유형</th>
         <th>브랜드</th>
         <th>원인처</th>
         <th>제품코드</th>
         <th>색상</th>
-        <th>LOT ON</th>
+        <th>LOT NO</th>
         <th>공급</th>
         <th>하자내역</th>
         <th>이미지</th>
-        <th>처리상태</th>
       </tr>
     </thead>
     <tbody id="tbody"></tbody>
@@ -654,7 +640,6 @@
   </div>
 </div>
 
-<footer class="note">항목 등록·수정은 품질관리 담당자에게 문의해 주세요.</footer>
 
 <div class="lightbox" id="lightbox" hidden>
   <button class="close" id="lightboxClose" aria-label="닫기">✕</button>
@@ -698,7 +683,7 @@
           <input id="fColor" type="text" placeholder="예: WW">
         </div>
         <div class="field">
-          <label for="fLot">LOT ON</label>
+          <label for="fLot">LOT NO</label>
           <input id="fLot" type="text" placeholder="예: 2026.08.27 J">
         </div>
         <div class="field">
@@ -766,7 +751,7 @@
     createdAt: new Date().toISOString()
   };
   const STATUS_LIST = ["진행중", "지연", "완료"];
-  const STATUS_COLOR = { "진행중": "var(--accent)", "지연": "var(--danger)", "완료": "var(--accent-2)" };
+  const STATUS_COLOR = { "진행중": "var(--warn)", "지연": "var(--danger)", "완료": "var(--accent-2)" };
 
   const vendorSelect = document.getElementById('vendorSelect');
   const brandFilter = document.getElementById('brandFilter');
@@ -1021,7 +1006,12 @@
     const status = c.status || '진행중';
     const color = STATUS_COLOR[status] || 'var(--ink-faint)';
     const opts = STATUS_LIST.map(s => `<option value="${s}" ${s === status ? 'selected' : ''}>${s}</option>`).join('');
-    return `<select class="status-pill" data-status-id="${c.id}" style="--pill-color:${color}">${opts}</select>`;
+    return `<div class="status-row">
+      <select class="status-pill" data-status-id="${c.id}" style="--pill-color:${color}">${opts}</select>
+      <button type="button" class="del-btn" data-del-id="${c.id}" aria-label="삭제" title="삭제">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m-8 0 1 13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1l1-13" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>`;
   }
 
   function render() {
@@ -1043,17 +1033,17 @@
 
     tbody.innerHTML = rows.map((c, i) => `
       <tr style="--i:${i}">
+        <td data-label="처리상태">${statusCell(c)}</td>
         <td data-label="구분">${escapeHtml(c.category)}</td>
         <td data-label="유형">${escapeHtml(c.type)}</td>
         <td data-label="브랜드">${escapeHtml(c.brand)}</td>
         <td data-label="원인처" class="source"><span class="tag" style="--hue:${hueOf(c.vendor)}">${escapeHtml(c.source)}</span></td>
         <td data-label="제품코드" class="mono">${escapeHtml(c.code)}</td>
         <td data-label="색상" class="mono">${escapeHtml(c.color)}</td>
-        <td data-label="LOT ON" class="mono">${escapeHtml(c.lotOn)}</td>
+        <td data-label="LOT NO" class="mono">${escapeHtml(c.lotOn)}</td>
         <td data-label="공급">${escapeHtml(c.supply)}</td>
         <td data-label="하자내역" class="defect">${escapeHtml(c.defect)}</td>
         <td data-label="이미지" class="imgcell">${imageCell(c)}</td>
-        <td data-label="처리상태">${statusCell(c)}</td>
       </tr>
     `).join('');
 
@@ -1061,6 +1051,14 @@
       sel.addEventListener('change', () => {
         fbDb.ref(`${CLAIMS_PATH}/${sel.dataset.statusId}/status`).set(sel.value)
           .catch(err => showToast('상태 변경 실패: ' + (err?.message || ''), true));
+      });
+    });
+    tbody.querySelectorAll('button[data-del-id]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (!confirm('이 클레임 항목을 삭제할까요? 되돌릴 수 없어요.')) return;
+        fbDb.ref(`${CLAIMS_PATH}/${btn.dataset.delId}`).remove()
+          .then(() => showToast('삭제했어요.'))
+          .catch(err => showToast('삭제 실패: ' + (err?.message || ''), true));
       });
     });
 
