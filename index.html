@@ -620,6 +620,7 @@
     <thead>
       <tr>
         <th>처리상태</th>
+        <th>발생일</th>
         <th>구분</th>
         <th>유형</th>
         <th>브랜드</th>
@@ -695,6 +696,10 @@
           <label for="fStatus">처리상태</label>
           <select id="fStatus"></select>
         </div>
+        <div class="field">
+          <label for="fOccurred">발생일</label>
+          <input id="fOccurred" type="date">
+        </div>
         <div class="field full">
           <label for="fDefect">하자내역</label>
           <textarea id="fDefect" placeholder="하자 내용을 적어주세요"></textarea>
@@ -749,6 +754,7 @@
     defect: "전선캡 커버 누락",
     images: [],
     status: "진행중",
+    occurredAt: "2026-08-27",
     createdAt: new Date().toISOString()
   };
   const STATUS_LIST = ["진행중", "지연", "완료"];
@@ -872,6 +878,7 @@
       document.getElementById('fLot').value = claim.lotOn || '';
       document.getElementById('fSupply').value = claim.supply || '';
       fStatus.value = claim.status || '진행중';
+      document.getElementById('fOccurred').value = claim.occurredAt || '';
       document.getElementById('fDefect').value = claim.defect || '';
       pendingFiles = (claim.images || []).map(img => ({
         name: img.name, type: img.type, dataUrl: img.url, thumb: img.type === 'image' ? img.url : null
@@ -880,6 +887,7 @@
       editingId = null;
       editingCreatedAt = null;
       document.getElementById('modalTitle').textContent = '클레임 등록';
+      document.getElementById('fOccurred').value = new Date().toISOString().slice(0, 10);
       pendingFiles = [];
     }
     renderFileChips();
@@ -973,6 +981,7 @@
         lotOn: document.getElementById('fLot').value.trim(),
         supply: document.getElementById('fSupply').value.trim(),
         status: fStatus.value,
+        occurredAt: document.getElementById('fOccurred').value,
         defect: document.getElementById('fDefect').value.trim(),
         images,
         createdAt: editingId ? editingCreatedAt : new Date().toISOString()
@@ -1060,6 +1069,7 @@
     tbody.innerHTML = rows.map((c, i) => `
       <tr style="--i:${i}">
         <td data-label="처리상태">${statusCell(c)}</td>
+        <td data-label="발생일" class="mono">${escapeHtml(c.occurredAt)}</td>
         <td data-label="구분">${escapeHtml(c.category)}</td>
         <td data-label="유형">${escapeHtml(c.type)}</td>
         <td data-label="브랜드">${escapeHtml(c.brand)}</td>
