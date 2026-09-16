@@ -353,7 +353,28 @@
     overflow: hidden;
     box-shadow: var(--shadow);
   }
-  .lightbox img { width: 100%; display: block; max-height: 60vh; object-fit: contain; background: var(--surface-alt); }
+  .lightbox .imgwrap {
+    position: relative;
+    width: 100%; height: 60vh;
+    overflow: hidden;
+    background: var(--surface-alt);
+    touch-action: none;
+    cursor: zoom-in;
+  }
+  .lightbox .imgwrap.zoomed { cursor: grab; }
+  .lightbox .imgwrap.dragging { cursor: grabbing; }
+  .lightbox img {
+    width: 100%; height: 100%; display: block;
+    object-fit: contain; background: var(--surface-alt);
+    transform-origin: center center;
+    user-select: none; -webkit-user-drag: none;
+  }
+  .zoom-hint {
+    position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.55); color: #fff;
+    font-size: 0.7rem; padding: 4px 10px; border-radius: 999px;
+    pointer-events: none;
+  }
   .lightbox .cap { padding: 14px 16px; font-size: 0.85rem; }
   .lightbox .cap .defecttxt { color: var(--ink-dim); margin-top: 4px; }
   .lightbox button.close {
@@ -638,7 +659,10 @@
 <div class="lightbox" id="lightbox" hidden>
   <button class="close" id="lightboxClose" aria-label="닫기">✕</button>
   <div class="box">
-    <img id="lightboxImg" src="" alt="">
+    <div class="imgwrap" id="lightboxImgWrap">
+      <img id="lightboxImg" src="" alt="">
+      <span class="zoom-hint">스크롤/핀치로 확대 · 드래그로 이동 · 더블클릭 리셋</span>
+    </div>
     <div class="cap">
       <div><strong id="lightboxCode"></strong></div>
       <div class="defecttxt" id="lightboxDefect"></div>
@@ -1120,22 +1144,112 @@
     buildChips();
   }
 
+  // ---------- 라이트박스 확대/이동 ----------
+  const lightbox = document.getElementById('lightbox');
+  const lightboxImg = document.getElementById('lightboxImg');
+  const lightboxImgWrap = document.getElementById('lightboxImgWrap');
+  let zoom = { scale: 1, tx: 0, ty: 0 };
+
+  function applyZoom() {
+    lightboxImg.style.transform = `translate(${zoom.tx}px, ${zoom.ty}px) scale(${zoom.scale})`;
+    lightboxImgWrap.classList.toggle('zoomed', zoom.scale > 1);
+  }
+  function resetZoom() {
+    zoom = { scale: 1, tx: 0, ty: 0 };
+    applyZoom();
+  }
+  function zoomAt(clientX, clientY, factor) {
+    const rect = lightboxImgWrap.getBoundingClientRect();
+    const offsetX = clientX - rect.left - rect.width / 2;
+    const offsetY = clientY - rect.top - rect.height / 2;
+    const newScale = Math.min(5, Math.max(1, zoom.scale * factor));
+    if (newScale === 1) { resetZoom(); return; }
+    zoom.tx = offsetX - (offsetX - zoom.tx) * (newScale / zoom.scale);
+    zoom.ty = offsetY - (offsetY - zoom.ty) * (newScale / zoom.scale);
+    zoom.scale = newScale;
+    applyZoom();
+  }
+
+  lightboxImgWrap.addEventListener('wheel', e => {
+    e.preventDefault();
+    zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+  }, { passive: false });
+
+  lightboxImgWrap.addEventListener('dblclick', e => {
+    if (zoom.scale > 1) resetZoom();
+    else zoomAt(e.clientX, e.clientY, 2.2);
+  });
+
+  let dragging = false, dragStart = null;
+  lightboxImgWrap.addEventListener('mousedown', e => {
+    if (zoom.scale <= 1) return;
+    dragging = true; dragStart = { x: e.clientX, y: e.clientY, tx: zoom.tx, ty: zoom.ty };
+    lightboxImgWrap.classList.add('dragging');
+  });
+  window.addEventListener('mousemove', e => {
+    if (!dragging) return;
+    zoom.tx = dragStart.tx + (e.clientX - dragStart.x);
+    zoom.ty = dragStart.ty + (e.clientY - dragStart.y);
+    applyZoom();
+  });
+  window.addEventListener('mouseup', () => { dragging = false; lightboxImgWrap.classList.remove('dragging'); });
+
+  let touchState = null;
+  lightboxImgWrap.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      const [a, b] = e.touches;
+      touchState = {
+        mode: 'pinch',
+        startDist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+        startScale: zoom.scale,
+        midX: (a.clientX + b.clientX) / 2,
+        midY: (a.clientY + b.clientY) / 2
+      };
+    } else if (e.touches.length === 1 && zoom.scale > 1) {
+      touchState = { mode: 'pan', x: e.touches[0].clientX, y: e.touches[0].clientY, tx: zoom.tx, ty: zoom.ty };
+    }
+  }, { passive: true });
+  lightboxImgWrap.addEventListener('touchmove', e => {
+    if (!touchState) return;
+    e.preventDefault();
+    if (touchState.mode === 'pinch' && e.touches.length === 2) {
+      const [a, b] = e.touches;
+      const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const factor = dist / touchState.startDist;
+      const newScale = Math.min(5, Math.max(1, touchState.startScale * factor));
+      const rect = lightboxImgWrap.getBoundingClientRect();
+      const offsetX = touchState.midX - rect.left - rect.width / 2;
+      const offsetY = touchState.midY - rect.top - rect.height / 2;
+      zoom.tx = offsetX - (offsetX - zoom.tx) * (newScale / zoom.scale);
+      zoom.ty = offsetY - (offsetY - zoom.ty) * (newScale / zoom.scale);
+      zoom.scale = newScale;
+      applyZoom();
+    } else if (touchState.mode === 'pan' && e.touches.length === 1) {
+      zoom.tx = touchState.tx + (e.touches[0].clientX - touchState.x);
+      zoom.ty = touchState.ty + (e.touches[0].clientY - touchState.y);
+      applyZoom();
+    }
+  }, { passive: false });
+  lightboxImgWrap.addEventListener('touchend', () => { touchState = null; });
+
   tbody.addEventListener('click', e => {
     const btn = e.target.closest('button.thumb[data-id]');
     if (!btn) return;
     const c = CLAIMS.find(x => String(x.id) === btn.dataset.id);
     const firstImg = (c?.images || []).find(f => f.type === 'image');
     if (!firstImg) return;
-    document.getElementById('lightboxImg').src = firstImg.url;
+    resetZoom();
+    lightboxImg.src = firstImg.url;
     document.getElementById('lightboxCode').textContent = `${c.code} / ${c.color}`;
     document.getElementById('lightboxDefect').textContent = c.defect;
-    document.getElementById('lightbox').hidden = false;
+    lightbox.hidden = false;
   });
   document.getElementById('lightboxClose').addEventListener('click', () => {
-    document.getElementById('lightbox').hidden = true;
+    lightbox.hidden = true;
+    resetZoom();
   });
-  document.getElementById('lightbox').addEventListener('click', e => {
-    if (e.target.id === 'lightbox') e.target.hidden = true;
+  lightbox.addEventListener('click', e => {
+    if (e.target.id === 'lightbox') { e.target.hidden = true; resetZoom(); }
   });
 
   chipRow.addEventListener('click', e => {
