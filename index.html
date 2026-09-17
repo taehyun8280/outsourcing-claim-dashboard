@@ -627,6 +627,8 @@
 <div class="toolbar">
   <input type="search" id="searchBox" placeholder="제품코드, 하자내역, 브랜드로 검색">
   <select id="brandFilter"></select>
+  <select id="monthFilter"></select>
+  <select id="weekFilter"></select>
 </div>
 
 <div class="panel">
@@ -775,6 +777,8 @@
 
   const vendorSelect = document.getElementById('vendorSelect');
   const brandFilter = document.getElementById('brandFilter');
+  const monthFilter = document.getElementById('monthFilter');
+  const weekFilter = document.getElementById('weekFilter');
   const searchBox = document.getElementById('searchBox');
   const tbody = document.getElementById('tbody');
   const emptyState = document.getElementById('emptyState');
@@ -807,6 +811,40 @@
     BRANDS.forEach(b => brandFilter.add(new Option(b, b)));
   }
 
+  function weekOfMonth(occurredAt) {
+    const day = Number(occurredAt.slice(8, 10));
+    return Math.ceil(day / 7);
+  }
+
+  function buildMonthOptions() {
+    const months = Array.from(new Set(CLAIMS.map(c => c.occurredAt).filter(Boolean).map(d => d.slice(0, 7))))
+      .sort((a, b) => b.localeCompare(a));
+    const prev = monthFilter.value;
+    monthFilter.innerHTML = '';
+    monthFilter.add(new Option('전체 월', ''));
+    months.forEach(m => {
+      const [y, mo] = m.split('-');
+      monthFilter.add(new Option(`${y}년 ${Number(mo)}월`, m));
+    });
+    monthFilter.value = months.includes(prev) ? prev : '';
+    buildWeekOptions();
+  }
+
+  function buildWeekOptions() {
+    const prev = weekFilter.value;
+    weekFilter.innerHTML = '';
+    weekFilter.add(new Option('전체 주차', ''));
+    if (monthFilter.value) {
+      const weeksUsed = new Set(
+        CLAIMS.filter(c => c.occurredAt && c.occurredAt.slice(0, 7) === monthFilter.value)
+          .map(c => weekOfMonth(c.occurredAt))
+      );
+      Array.from(weeksUsed).sort((a, b) => a - b).forEach(w => weekFilter.add(new Option(`${w}주차`, String(w))));
+    }
+    weekFilter.value = Array.from(weekFilter.options).some(o => o.value === prev) ? prev : '';
+    weekFilter.disabled = !monthFilter.value;
+  }
+
   // ---------- Firebase (실시간 공유 저장소) ----------
   // claim-dashboard 프로젝트와 같은 Firebase 프로젝트를 재사용하되, 이 대시보드 전용 경로만 씁니다.
   const firebaseConfig = {
@@ -833,6 +871,7 @@
     }
     fbReady = true;
     CLAIMS = Object.keys(val).map(id => ({ id, ...val[id] }));
+    buildMonthOptions();
     render();
   }, err => {
     console.error('Firebase 연결 실패', err);
@@ -1079,8 +1118,13 @@
       ? '전체 업체의 클레임 항목을 보고 있습니다.'
       : `"${vendor}" 업체 관련 클레임 항목만 표시 중입니다.`;
 
+    const month = monthFilter.value;
+    const week = weekFilter.value;
+
     let rows = CLAIMS.filter(c => vendor === '__ALL__' || c.vendor === vendor);
     if (brand) rows = rows.filter(c => c.brand === brand);
+    if (month) rows = rows.filter(c => c.occurredAt && c.occurredAt.slice(0, 7) === month);
+    if (week) rows = rows.filter(c => c.occurredAt && String(weekOfMonth(c.occurredAt)) === week);
     if (q) {
       rows = rows.filter(c =>
         [c.code, c.defect, c.brand, c.category, c.type, c.source].some(f => String(f ?? '').toLowerCase().includes(q))
@@ -1271,11 +1315,14 @@
 
   vendorSelect.addEventListener('change', () => { saveVendor(vendorSelect.value); render(); });
   brandFilter.addEventListener('change', render);
+  monthFilter.addEventListener('change', () => { buildWeekOptions(); render(); });
+  weekFilter.addEventListener('change', render);
   searchBox.addEventListener('input', render);
 
   buildSpectrum();
   buildVendorOptions();
   buildBrandOptions();
+  buildMonthOptions();
   render();
 </script>
 </body>
