@@ -1086,6 +1086,7 @@
         [c.code, c.defect, c.brand, c.category, c.type, c.source].some(f => String(f ?? '').toLowerCase().includes(q))
       );
     }
+    rows = rows.slice().sort((a, b) => String(b.occurredAt || '').localeCompare(String(a.occurredAt || '')));
 
     tbody.innerHTML = rows.map((c, i) => `
       <tr style="--i:${i}">
