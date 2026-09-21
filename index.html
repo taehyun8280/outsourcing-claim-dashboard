@@ -591,12 +591,43 @@
 
   .manage-cell { display: flex; gap: 6px; }
   .manage-btn {
+    display: inline-block;
     border: 1px solid var(--border); background: var(--surface-alt); color: var(--ink);
     font: inherit; font-size: 0.76rem; font-weight: 600;
     padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+    text-decoration: none;
   }
   .manage-btn:hover { border-color: var(--accent); color: var(--accent); }
   .manage-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  .mail-panel {
+    background: var(--accent-soft);
+    border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  .mail-panel[hidden] { display: none; }
+  .mail-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .mail-panel-head strong { font-size: 0.9rem; }
+  .mail-panel-sub { margin: 6px 0 12px; font-size: 0.78rem; color: var(--ink-dim); }
+  .mail-vendor-list { display: flex; flex-direction: column; gap: 8px; }
+  .mail-vendor-row {
+    display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 0.84rem;
+  }
+  .mail-vendor-row .vname { display: flex; align-items: center; gap: 7px; font-weight: 600; }
+  .mail-vendor-row .vcount { color: var(--ink-faint); font-weight: 400; }
+  .mail-vendor-row .vemail { color: var(--ink-dim); font-size: 0.78rem; }
+
+  .contacts-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; max-height: 50vh; overflow-y: auto; }
+  .contact-row { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 10px; }
+  .contact-row label { font-size: 0.84rem; font-weight: 600; }
+  .contact-row input {
+    background: var(--surface-alt); border: 1px solid var(--border); color: var(--ink);
+    font: inherit; font-size: 0.84rem; padding: 8px 10px; border-radius: 8px;
+  }
 </style>
 </head>
 <body>
@@ -617,6 +648,7 @@
       <label for="vendorSelect">보기</label>
       <select id="vendorSelect"></select>
     </div>
+    <button type="button" class="btn-ghost" id="openContacts">담당자 메일 설정</button>
     <button type="button" class="btn-primary" id="openRegister">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14" stroke-linecap="round"/></svg>
       클레임 등록
@@ -637,10 +669,20 @@
   <select id="weekFilter"></select>
 </div>
 
+<div class="mail-panel" id="mailPanel" hidden>
+  <div class="mail-panel-head">
+    <strong id="mailSelectedCount">0건 선택됨</strong>
+    <button type="button" class="btn-ghost" id="clearSelection">선택 해제</button>
+  </div>
+  <p class="mail-panel-sub">업체별로 나눠서 대책서 메일 작성 창을 열어드려요. (첨부파일은 메일 창에서 직접 첨부해 주세요)</p>
+  <div class="mail-vendor-list" id="mailVendorList"></div>
+</div>
+
 <div class="panel">
   <table id="dataTable">
     <thead>
       <tr>
+        <th><input type="checkbox" id="selectAll" aria-label="전체 선택"></th>
         <th>발생일</th>
         <th>년도</th>
         <th>발생월</th>
@@ -754,6 +796,18 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="contactsModal" hidden>
+  <div class="modal-card">
+    <h2>업체 담당자 메일 설정</h2>
+    <p class="modal-sub">업체별 담당자 이메일을 입력해두면, 대책서 메일 작성 시 받는사람으로 자동 채워집니다.</p>
+    <div class="contacts-list" id="contactsList"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn-ghost" id="cancelContacts">닫기</button>
+      <button type="button" class="btn-primary" id="saveContacts">저장</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast" hidden></div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
@@ -805,6 +859,7 @@
   const subtitle = document.getElementById('subtitle');
   const chipRow = document.getElementById('chipRow');
   const spectrum = document.getElementById('spectrum');
+  const selectedIds = new Set();
 
   function loadVendor() {
     try { return localStorage.getItem('claim_dashboard_vendor') || '__ALL__'; } catch (e) { return '__ALL__'; }
@@ -878,6 +933,7 @@
   firebase.initializeApp(firebaseConfig);
   const fbDb = firebase.database();
   const CLAIMS_PATH = 'outsourcing_claims/claims';
+  const CONTACTS_PATH = 'outsourcing_claims/vendorContacts';
   const MAX_FILE_BYTES = 1.5 * 1024 * 1024; // 결제 없는 무료 DB 저장이라 파일당 용량을 제한합니다
 
   let fbReady = false;
@@ -895,6 +951,12 @@
   }, err => {
     console.error('Firebase 연결 실패', err);
     showToast('실시간 데이터를 불러오지 못했어요. 새로고침해 보세요.', true);
+  });
+
+  let VENDOR_CONTACTS = {};
+  fbDb.ref(CONTACTS_PATH).on('value', snap => {
+    VENDOR_CONTACTS = snap.val() || {};
+    updateMailPanel();
   });
 
   function showToast(msg, isError) {
@@ -1114,6 +1176,85 @@
     }
   });
 
+  // ---------- 대책서 메일 발송 ----------
+  const mailPanel = document.getElementById('mailPanel');
+  const mailSelectedCount = document.getElementById('mailSelectedCount');
+  const mailVendorList = document.getElementById('mailVendorList');
+
+  function buildMailto(vendor, claims, email) {
+    const subject = `[${vendor}] 외주 클레임 대책서 요청 (${claims.length}건)`;
+    const lines = claims.map((c, i) => (
+      `[${i + 1}] 발생일 ${c.occurredAt || '-'} / ${c.category || ''} / ${c.type || ''}\n` +
+      `브랜드: ${c.brand || ''} / 제품코드: ${c.code || ''} / 색상: ${c.color || ''} / LOT NO: ${c.lotOn || ''}\n` +
+      `하자내역: ${c.defect || ''}`
+    ));
+    const body = lines.join('\n\n') + '\n\n※ 하자 사진과 대책서는 이 메일에 직접 첨부해 주세요.';
+    return `mailto:${email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+  }
+
+  function updateMailPanel() {
+    mailPanel.hidden = selectedIds.size === 0;
+    if (selectedIds.size === 0) return;
+    mailSelectedCount.textContent = `${selectedIds.size}건 선택됨`;
+
+    const grouped = {};
+    CLAIMS.filter(c => selectedIds.has(c.id)).forEach(c => {
+      (grouped[c.vendor] = grouped[c.vendor] || []).push(c);
+    });
+
+    mailVendorList.innerHTML = Object.entries(grouped).map(([vendor, claims]) => {
+      const email = VENDOR_CONTACTS[vendor]?.email;
+      const action = email
+        ? `<a class="manage-btn" href="${buildMailto(vendor, claims, email)}">메일 작성</a>`
+        : `<button type="button" class="manage-btn" data-open-contacts>이메일 미설정 · 설정하기</button>`;
+      return `
+        <div class="mail-vendor-row">
+          <div>
+            <div class="vname"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:hsl(${hueOf(vendor)} var(--tag-sat) 50%)"></span>${escapeHtml(vendor)} <span class="vcount">${claims.length}건</span></div>
+            <div class="vemail">${email ? escapeHtml(email) : '담당자 이메일이 설정되지 않았어요'}</div>
+          </div>
+          ${action}
+        </div>
+      `;
+    }).join('');
+
+    mailVendorList.querySelectorAll('button[data-open-contacts]').forEach(btn => {
+      btn.addEventListener('click', openContactsModal);
+    });
+  }
+
+  document.getElementById('clearSelection').addEventListener('click', () => {
+    selectedIds.clear();
+    render();
+  });
+
+  // ---------- 업체 담당자 메일 설정 ----------
+  const contactsModal = document.getElementById('contactsModal');
+  const contactsList = document.getElementById('contactsList');
+
+  function openContactsModal() {
+    contactsList.innerHTML = VENDORS.map(v => `
+      <div class="contact-row">
+        <label for="contact-${v}">${escapeHtml(v)}</label>
+        <input type="email" id="contact-${v}" placeholder="담당자 이메일" value="${escapeHtml(VENDOR_CONTACTS[v]?.email || '')}">
+      </div>
+    `).join('');
+    contactsModal.hidden = false;
+  }
+  document.getElementById('openContacts').addEventListener('click', openContactsModal);
+  document.getElementById('cancelContacts').addEventListener('click', () => { contactsModal.hidden = true; });
+  contactsModal.addEventListener('click', e => { if (e.target === contactsModal) contactsModal.hidden = true; });
+  document.getElementById('saveContacts').addEventListener('click', () => {
+    const updates = {};
+    VENDORS.forEach(v => {
+      const val = document.getElementById(`contact-${v}`).value.trim();
+      updates[v] = { email: val };
+    });
+    fbDb.ref(CONTACTS_PATH).update(updates)
+      .then(() => { showToast('저장했어요.'); contactsModal.hidden = true; })
+      .catch(err => showToast('저장 실패: ' + (err?.message || ''), true));
+  });
+
   function setVendor(v) {
     vendorSelect.value = v;
     saveVendor(v);
@@ -1178,6 +1319,7 @@
 
     tbody.innerHTML = rows.map((c, i) => `
       <tr style="--i:${i}">
+        <td data-label="선택"><input type="checkbox" class="row-check" data-id="${c.id}" ${selectedIds.has(c.id) ? 'checked' : ''}></td>
         <td data-label="발생일" class="mono">${escapeHtml(c.occurredAt)}</td>
         <td data-label="년도" class="mono">${c.occurredAt ? escapeHtml(c.occurredAt.slice(0, 4)) : ''}</td>
         <td data-label="발생월" class="mono">${c.occurredAt ? Number(c.occurredAt.slice(5, 7)) + '월' : ''}</td>
@@ -1214,6 +1356,18 @@
         if (c) openModal(c);
       });
     });
+    tbody.querySelectorAll('input.row-check').forEach(chk => {
+      chk.addEventListener('change', () => {
+        if (chk.checked) selectedIds.add(chk.dataset.id); else selectedIds.delete(chk.dataset.id);
+        updateMailPanel();
+      });
+    });
+    const selectAllBox = document.getElementById('selectAll');
+    selectAllBox.checked = rows.length > 0 && rows.every(c => selectedIds.has(c.id));
+    selectAllBox.onchange = () => {
+      rows.forEach(c => { if (selectAllBox.checked) selectedIds.add(c.id); else selectedIds.delete(c.id); });
+      render();
+    };
 
     emptyState.hidden = rows.length !== 0;
     document.getElementById('dataTable').style.display = rows.length === 0 ? 'none' : '';
@@ -1245,6 +1399,7 @@
     `;
 
     buildChips();
+    updateMailPanel();
   }
 
   // ---------- 라이트박스 확대/이동 ----------
