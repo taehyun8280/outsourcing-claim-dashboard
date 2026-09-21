@@ -488,6 +488,12 @@
     outline: 2px solid var(--focus); outline-offset: 1px;
   }
 
+  .attach-label {
+    display: block;
+    font-size: 0.76rem;
+    color: var(--ink-dim);
+    margin: 4px 0 6px;
+  }
   .dropzone {
     border: 1.5px dashed var(--border);
     border-radius: var(--radius);
@@ -646,6 +652,7 @@
         <th>공급</th>
         <th>하자내역</th>
         <th>사진/PDF</th>
+        <th>대책서</th>
         <th>관리</th>
       </tr>
     </thead>
@@ -720,12 +727,21 @@
         </div>
       </div>
 
-      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="사진 또는 PDF 첨부">
+      <label class="attach-label">하자 사진/PDF</label>
+      <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="하자 사진 또는 PDF 첨부">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <div><strong>클릭</strong>하거나 <strong>드래그</strong>, 또는 이미지 복사 후 <strong>Ctrl+V</strong>로 붙여넣어 첨부하세요</div>
         <input type="file" id="fileInput" accept="image/*,application/pdf" multiple hidden>
       </div>
       <div class="filechips" id="fileChips"></div>
+
+      <label class="attach-label">대책서 사진/PDF</label>
+      <div class="dropzone" id="dropzone2" tabindex="0" role="button" aria-label="대책서 사진 또는 PDF 첨부">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div><strong>클릭</strong>하거나 <strong>드래그</strong>, 또는 이미지 복사 후 <strong>Ctrl+V</strong>로 붙여넣어 첨부하세요</div>
+        <input type="file" id="fileInput2" accept="image/*,application/pdf" multiple hidden>
+      </div>
+      <div class="filechips" id="fileChips2"></div>
 
       <div class="modal-actions">
         <button type="button" class="btn-ghost" id="cancelRegister">취소</button>
@@ -896,10 +912,15 @@
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
   const fileChipsEl = document.getElementById('fileChips');
+  const dropzone2 = document.getElementById('dropzone2');
+  const fileInput2 = document.getElementById('fileInput2');
+  const fileChips2El = document.getElementById('fileChips2');
   const fBrand = document.getElementById('fBrand');
   const fVendor = document.getElementById('fVendor');
 
   let pendingFiles = [];
+  let pendingReportFiles = [];
+  let activeZone = 'claim';
 
   const fCategory = document.getElementById('fCategory');
   const fType = document.getElementById('fType');
@@ -937,14 +958,20 @@
       pendingFiles = (claim.images || []).map(img => ({
         name: img.name, type: img.type, dataUrl: img.url, thumb: img.type === 'image' ? img.url : null
       }));
+      pendingReportFiles = (claim.reports || []).map(img => ({
+        name: img.name, type: img.type, dataUrl: img.url, thumb: img.type === 'image' ? img.url : null
+      }));
     } else {
       editingId = null;
       editingCreatedAt = null;
       document.getElementById('modalTitle').textContent = '클레임 등록';
       document.getElementById('fOccurred').value = new Date().toISOString().slice(0, 10);
       pendingFiles = [];
+      pendingReportFiles = [];
     }
+    activeZone = 'claim';
     renderFileChips();
+    renderReportFileChips();
     registerModal.hidden = false;
   }
   function closeModal() { registerModal.hidden = true; }
@@ -980,7 +1007,7 @@
     });
   }
 
-  async function addFiles(fileList) {
+  async function addFilesTo(fileList, targetArr, renderFn) {
     for (const file of Array.from(fileList)) {
       if (file.type === 'application/pdf') {
         if (file.size > MAX_FILE_BYTES) {
@@ -988,34 +1015,43 @@
           continue;
         }
         const dataUrl = await readAsDataUrl(file);
-        pendingFiles.push({ name: file.name, size: file.size, type: 'pdf', thumb: null, dataUrl });
+        targetArr.push({ name: file.name, size: file.size, type: 'pdf', thumb: null, dataUrl });
       } else if (file.type.startsWith('image/')) {
         const dataUrl = await resizeImage(file, 640, 0.72);
-        pendingFiles.push({ name: file.name, size: file.size, type: 'image', thumb: dataUrl, dataUrl });
+        targetArr.push({ name: file.name, size: file.size, type: 'image', thumb: dataUrl, dataUrl });
       }
     }
-    renderFileChips();
+    renderFn();
   }
+  const addFiles = fileList => addFilesTo(fileList, pendingFiles, renderFileChips);
+  const addReportFiles = fileList => addFilesTo(fileList, pendingReportFiles, renderReportFileChips);
 
-  function renderFileChips() {
-    fileChipsEl.innerHTML = pendingFiles.map((f, i) => `
+  function renderChipsInto(arr, chipsEl, rerender) {
+    chipsEl.innerHTML = arr.map((f, i) => `
       <span class="filechip">
         ${f.type === 'image' ? `<img src="${f.thumb}" alt="">` : `<span class="pdfmark">PDF</span>`}
         <span class="fname">${escapeHtml(f.name)}</span>
         <button type="button" data-i="${i}" aria-label="첨부 제거">✕</button>
       </span>
     `).join('');
-    fileChipsEl.querySelectorAll('button[data-i]').forEach(btn => {
-      btn.addEventListener('click', () => { pendingFiles.splice(Number(btn.dataset.i), 1); renderFileChips(); });
+    chipsEl.querySelectorAll('button[data-i]').forEach(btn => {
+      btn.addEventListener('click', () => { arr.splice(Number(btn.dataset.i), 1); rerender(); });
     });
   }
+  function renderFileChips() { renderChipsInto(pendingFiles, fileChipsEl, renderFileChips); }
+  function renderReportFileChips() { renderChipsInto(pendingReportFiles, fileChips2El, renderReportFileChips); }
 
-  dropzone.addEventListener('click', () => fileInput.click());
-  dropzone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); } });
-  fileInput.addEventListener('change', () => addFiles(fileInput.files));
-  ['dragover', 'dragenter'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.add('drag'); }));
-  ['dragleave', 'drop'].forEach(evt => dropzone.addEventListener(evt, e => { e.preventDefault(); dropzone.classList.remove('drag'); }));
-  dropzone.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) addFiles(e.dataTransfer.files); });
+  function setupDropzone(zoneEl, inputEl, onFiles, zoneName) {
+    zoneEl.addEventListener('click', () => { activeZone = zoneName; inputEl.click(); });
+    zoneEl.addEventListener('focus', () => { activeZone = zoneName; });
+    zoneEl.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activeZone = zoneName; inputEl.click(); } });
+    inputEl.addEventListener('change', () => onFiles(inputEl.files));
+    ['dragover', 'dragenter'].forEach(evt => zoneEl.addEventListener(evt, e => { e.preventDefault(); zoneEl.classList.add('drag'); activeZone = zoneName; }));
+    ['dragleave', 'drop'].forEach(evt => zoneEl.addEventListener(evt, e => { e.preventDefault(); zoneEl.classList.remove('drag'); }));
+    zoneEl.addEventListener('drop', e => { if (e.dataTransfer?.files?.length) onFiles(e.dataTransfer.files); });
+  }
+  setupDropzone(dropzone, fileInput, addFiles, 'claim');
+  setupDropzone(dropzone2, fileInput2, addReportFiles, 'report');
 
   document.addEventListener('paste', e => {
     if (registerModal.hidden) return;
@@ -1028,7 +1064,10 @@
         if (file) files.push(file);
       }
     }
-    if (files.length) { e.preventDefault(); addFiles(files); }
+    if (files.length) {
+      e.preventDefault();
+      if (activeZone === 'report') addReportFiles(files); else addFiles(files);
+    }
   });
 
   registerForm.addEventListener('submit', async e => {
@@ -1038,6 +1077,7 @@
     submitBtn.textContent = '저장 중...';
     try {
       const images = pendingFiles.map(pf => ({ url: pf.dataUrl, name: pf.name, type: pf.type }));
+      const reports = pendingReportFiles.map(pf => ({ url: pf.dataUrl, name: pf.name, type: pf.type }));
       const entry = {
         category: document.getElementById('fCategory').value.trim(),
         type: document.getElementById('fType').value.trim(),
@@ -1051,6 +1091,7 @@
         occurredAt: document.getElementById('fOccurred').value,
         defect: document.getElementById('fDefect').value.trim(),
         images,
+        reports,
         createdAt: editingId ? editingCreatedAt : new Date().toISOString()
       };
       if (editingId) {
@@ -1097,13 +1138,13 @@
     return '<span class="thumb" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.5"/><path d="m4 17 5-5 4 4 3-3 4 4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>';
   }
 
-  function imageCell(c) {
-    const images = c.images || [];
+  function imageCell(c, field = 'images') {
+    const images = c[field] || [];
     if (images.length === 0) return placeholderThumb();
     const firstImg = images.find(f => f.type === 'image');
     if (firstImg) {
       const extra = images.length > 1 ? `<span class="imgcount">+${images.length - 1}</span>` : '';
-      return `<button class="thumb" data-id="${c.id}"><img src="${escapeHtml(firstImg.url)}" alt="${escapeHtml(c.defect)} 사진">${extra}</button>`;
+      return `<button class="thumb" data-id="${c.id}" data-field="${field}"><img src="${escapeHtml(firstImg.url)}" alt="${escapeHtml(c.defect)} 사진">${extra}</button>`;
     }
     const pdf = images[0];
     return `<a class="pdflink" href="${escapeHtml(pdf.url)}" target="_blank" rel="noopener">PDF</a>`;
@@ -1144,7 +1185,8 @@
         <td data-label="LOT NO" class="mono">${escapeHtml(c.lotOn)}</td>
         <td data-label="공급">${escapeHtml(c.supply)}</td>
         <td data-label="하자내역" class="defect">${escapeHtml(c.defect)}</td>
-        <td data-label="사진/PDF" class="imgcell">${imageCell(c)}</td>
+        <td data-label="사진/PDF" class="imgcell">${imageCell(c, 'images')}</td>
+        <td data-label="대책서" class="imgcell">${imageCell(c, 'reports')}</td>
         <td data-label="관리" class="manage-cell">
           <button type="button" class="manage-btn" data-edit-id="${c.id}">수정</button>
           <button type="button" class="manage-btn danger" data-del-id="${c.id}">삭제</button>
@@ -1291,7 +1333,8 @@
     const btn = e.target.closest('button.thumb[data-id]');
     if (!btn) return;
     const c = CLAIMS.find(x => String(x.id) === btn.dataset.id);
-    const firstImg = (c?.images || []).find(f => f.type === 'image');
+    const field = btn.dataset.field || 'images';
+    const firstImg = (c?.[field] || []).find(f => f.type === 'image');
     if (!firstImg) return;
     resetZoom();
     lightboxImg.src = firstImg.url;
