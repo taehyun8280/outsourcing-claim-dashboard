@@ -266,7 +266,10 @@
     overflow: hidden;
   }
 
+  .table-scroll { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  th, td { white-space: nowrap; }
+  td.defect { white-space: normal; }
   thead th {
     text-align: left;
     font-size: 0.71rem;
@@ -400,6 +403,7 @@
       display: grid;
       grid-template-columns: subgrid;
       grid-column: 1 / -1;
+      white-space: normal;
     }
     tbody td::before {
       content: attr(data-label);
@@ -679,6 +683,7 @@
 </div>
 
 <div class="panel">
+  <div class="table-scroll">
   <table id="dataTable">
     <thead>
       <tr>
@@ -703,6 +708,7 @@
     </thead>
     <tbody id="tbody"></tbody>
   </table>
+  </div>
   <div class="empty" id="emptyState" hidden>
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12h6M12 3v18M3 12h.01M21 12h.01" stroke-linecap="round"/></svg>
     <div>해당 업체의 등록된 클레임이 아직 없습니다.</div>
