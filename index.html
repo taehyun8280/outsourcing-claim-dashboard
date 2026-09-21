@@ -89,7 +89,7 @@
     font-family: "Gowun Dodum", "Malgun Gothic", sans-serif;
     padding-inline: 20px;
     padding-block: 30px 60px;
-    max-width: 1220px;
+    max-width: 1800px;
     margin: 0 auto;
   }
   .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-variant-numeric: tabular-nums; }
@@ -691,6 +691,9 @@
       <tr>
         <th><input type="checkbox" id="selectAll" aria-label="전체 선택"></th>
         <th>발생일</th>
+        <th>년도</th>
+        <th>발생월</th>
+        <th>주차</th>
         <th>구분</th>
         <th>유형</th>
         <th>브랜드</th>
@@ -1325,7 +1328,10 @@
     tbody.innerHTML = rows.map((c, i) => `
       <tr style="--i:${i}">
         <td data-label="선택"><input type="checkbox" class="row-check" data-id="${c.id}" ${selectedIds.has(c.id) ? 'checked' : ''}></td>
-        <td data-label="발생일" class="mono datecell">${c.occurredAt ? `${escapeHtml(c.occurredAt)}<span class="datesub">${Number(c.occurredAt.slice(5, 7))}월 ${weekOfMonth(c.occurredAt)}주차</span>` : ''}</td>
+        <td data-label="발생일" class="mono">${escapeHtml(c.occurredAt)}</td>
+        <td data-label="년도" class="mono">${c.occurredAt ? escapeHtml(c.occurredAt.slice(0, 4)) : ''}</td>
+        <td data-label="발생월" class="mono">${c.occurredAt ? Number(c.occurredAt.slice(5, 7)) + '월' : ''}</td>
+        <td data-label="주차" class="mono">${c.occurredAt ? weekOfMonth(c.occurredAt) + '주차' : ''}</td>
         <td data-label="구분">${escapeHtml(c.category)}</td>
         <td data-label="유형">${escapeHtml(c.type)}</td>
         <td data-label="브랜드">${escapeHtml(c.brand)}</td>
