@@ -642,6 +642,9 @@
     <thead>
       <tr>
         <th>발생일</th>
+        <th>년도</th>
+        <th>발생월</th>
+        <th>주차</th>
         <th>구분</th>
         <th>유형</th>
         <th>브랜드</th>
@@ -1176,6 +1179,9 @@
     tbody.innerHTML = rows.map((c, i) => `
       <tr style="--i:${i}">
         <td data-label="발생일" class="mono">${escapeHtml(c.occurredAt)}</td>
+        <td data-label="년도" class="mono">${c.occurredAt ? escapeHtml(c.occurredAt.slice(0, 4)) : ''}</td>
+        <td data-label="발생월" class="mono">${c.occurredAt ? Number(c.occurredAt.slice(5, 7)) + '월' : ''}</td>
+        <td data-label="주차" class="mono">${c.occurredAt ? weekOfMonth(c.occurredAt) + '주차' : ''}</td>
         <td data-label="구분">${escapeHtml(c.category)}</td>
         <td data-label="유형">${escapeHtml(c.type)}</td>
         <td data-label="브랜드">${escapeHtml(c.brand)}</td>
