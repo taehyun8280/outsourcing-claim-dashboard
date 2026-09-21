@@ -425,6 +425,15 @@
     gap: 14px;
     margin-bottom: 16px;
   }
+  .brand-logo-wrap {
+    display: inline-flex; align-items: center;
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 6px 10px;
+    flex-shrink: 0;
+    box-shadow: var(--shadow);
+  }
+  .brand-logo { height: 22px; width: auto; display: block; }
   header.top { align-items: center; }
   .actions-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
@@ -642,6 +651,7 @@
 <body>
 
 <div class="brandbar">
+  <span class="brand-logo-wrap"><img class="brand-logo" src="data:image/png;base64,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" alt="FURSYS"></span>
   <div>
     <span class="eyebrow">협력사 품질관리</span>
     <h1 style="margin:2px 0 0;font-size:1.3rem;">외주 고객클레임 관리</h1>
