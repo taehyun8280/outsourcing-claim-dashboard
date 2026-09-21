@@ -267,22 +267,24 @@
   }
 
   .table-scroll { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.78rem; table-layout: auto; }
   th, td { white-space: nowrap; }
   td.defect { white-space: normal; }
+  .datecell { line-height: 1.35; }
+  .datesub { display: block; font-size: 0.68rem; color: var(--ink-faint); font-weight: 400; }
   thead th {
     text-align: left;
-    font-size: 0.71rem;
-    letter-spacing: 0.05em;
+    font-size: 0.66rem;
+    letter-spacing: 0.03em;
     text-transform: uppercase;
     color: var(--ink-dim);
     background: var(--surface-alt);
-    padding: 11px 12px;
+    padding: 8px 7px;
     border-bottom: 1px solid var(--border);
     white-space: nowrap;
   }
   tbody td {
-    padding: 10px 12px;
+    padding: 7px 7px;
     border-bottom: 1px solid var(--border);
     vertical-align: middle;
   }
@@ -300,8 +302,8 @@
     background: hsl(var(--hue) var(--tag-sat) var(--tag-bg-l));
     color: hsl(var(--hue) var(--tag-sat) var(--tag-text-l));
     border-radius: 6px;
-    padding: 3px 9px;
-    font-size: 0.8rem;
+    padding: 2px 7px;
+    font-size: 0.72rem;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -313,7 +315,7 @@
   }
 
   .thumb {
-    width: 56px; height: 56px;
+    width: 38px; height: 38px;
     border-radius: 8px;
     border: 1px solid var(--border);
     background: var(--surface-alt);
@@ -587,18 +589,18 @@
   }
   .thumb { position: relative; }
   .pdflink {
-    width: 56px; height: 56px; border-radius: 8px; border: 1px solid var(--border);
+    width: 38px; height: 38px; border-radius: 8px; border: 1px solid var(--border);
     background: var(--danger-soft); color: var(--danger);
     display: flex; align-items: center; justify-content: center;
-    font-size: 0.65rem; font-weight: 700; text-decoration: none;
+    font-size: 0.6rem; font-weight: 700; text-decoration: none;
   }
 
-  .manage-cell { display: flex; gap: 6px; }
+  .manage-cell { display: flex; gap: 5px; }
   .manage-btn {
     display: inline-block;
     border: 1px solid var(--border); background: var(--surface-alt); color: var(--ink);
-    font: inherit; font-size: 0.76rem; font-weight: 600;
-    padding: 6px 10px; border-radius: 6px; cursor: pointer; white-space: nowrap;
+    font: inherit; font-size: 0.72rem; font-weight: 600;
+    padding: 4px 8px; border-radius: 6px; cursor: pointer; white-space: nowrap;
     text-decoration: none;
   }
   .manage-btn:hover { border-color: var(--accent); color: var(--accent); }
@@ -689,9 +691,6 @@
       <tr>
         <th><input type="checkbox" id="selectAll" aria-label="전체 선택"></th>
         <th>발생일</th>
-        <th>년도</th>
-        <th>발생월</th>
-        <th>주차</th>
         <th>구분</th>
         <th>유형</th>
         <th>브랜드</th>
@@ -1326,10 +1325,7 @@
     tbody.innerHTML = rows.map((c, i) => `
       <tr style="--i:${i}">
         <td data-label="선택"><input type="checkbox" class="row-check" data-id="${c.id}" ${selectedIds.has(c.id) ? 'checked' : ''}></td>
-        <td data-label="발생일" class="mono">${escapeHtml(c.occurredAt)}</td>
-        <td data-label="년도" class="mono">${c.occurredAt ? escapeHtml(c.occurredAt.slice(0, 4)) : ''}</td>
-        <td data-label="발생월" class="mono">${c.occurredAt ? Number(c.occurredAt.slice(5, 7)) + '월' : ''}</td>
-        <td data-label="주차" class="mono">${c.occurredAt ? weekOfMonth(c.occurredAt) + '주차' : ''}</td>
+        <td data-label="발생일" class="mono datecell">${c.occurredAt ? `${escapeHtml(c.occurredAt)}<span class="datesub">${Number(c.occurredAt.slice(5, 7))}월 ${weekOfMonth(c.occurredAt)}주차</span>` : ''}</td>
         <td data-label="구분">${escapeHtml(c.category)}</td>
         <td data-label="유형">${escapeHtml(c.type)}</td>
         <td data-label="브랜드">${escapeHtml(c.brand)}</td>
