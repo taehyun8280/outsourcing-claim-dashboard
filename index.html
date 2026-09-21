@@ -425,15 +425,12 @@
     gap: 14px;
     margin-bottom: 16px;
   }
-  .brand-logo-wrap {
-    display: inline-flex; align-items: center;
-    background: #ffffff;
-    border-radius: 8px;
-    padding: 6px 10px;
-    flex-shrink: 0;
-    box-shadow: var(--shadow);
+  .brand-logo-wrap { display: inline-flex; align-items: center; flex-shrink: 0; }
+  .brand-logo { height: 26px; width: auto; display: block; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .brand-logo { filter: invert(1) brightness(1.7); }
   }
-  .brand-logo { height: 22px; width: auto; display: block; }
+  :root[data-theme="dark"] .brand-logo { filter: invert(1) brightness(1.7); }
   header.top { align-items: center; }
   .actions-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 
