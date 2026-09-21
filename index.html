@@ -628,11 +628,14 @@
   .mail-vendor-row .vemail { color: var(--ink-dim); font-size: 0.78rem; }
 
   .contacts-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; max-height: 50vh; overflow-y: auto; }
-  .contact-row { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 10px; }
+  .contact-row { display: grid; grid-template-columns: 80px 1fr 1.4fr; align-items: center; gap: 8px; }
   .contact-row label { font-size: 0.84rem; font-weight: 600; }
   .contact-row input {
     background: var(--surface-alt); border: 1px solid var(--border); color: var(--ink);
-    font: inherit; font-size: 0.84rem; padding: 8px 10px; border-radius: 8px;
+    font: inherit; font-size: 0.84rem; padding: 8px 10px; border-radius: 8px; min-width: 0;
+  }
+  @media (max-width: 520px) {
+    .contact-row { grid-template-columns: 1fr; gap: 4px; }
   }
 </style>
 </head>
@@ -1189,15 +1192,16 @@
   const mailSelectedCount = document.getElementById('mailSelectedCount');
   const mailVendorList = document.getElementById('mailVendorList');
 
-  function buildMailto(vendor, claims, email) {
+  function buildMailto(vendor, claims, contact) {
     const subject = `[${vendor}] 외주 클레임 대책서 요청 (${claims.length}건)`;
+    const greeting = contact?.name ? `${contact.name} 담당자님, 안녕하세요.\n\n` : '';
     const lines = claims.map((c, i) => (
       `[${i + 1}] 발생일 ${c.occurredAt || '-'} / ${c.category || ''} / ${c.type || ''}\n` +
       `브랜드: ${c.brand || ''} / 제품코드: ${c.code || ''} / 색상: ${c.color || ''} / LOT NO: ${c.lotOn || ''}\n` +
       `하자내역: ${c.defect || ''}`
     ));
-    const body = lines.join('\n\n') + '\n\n※ 하자 사진과 대책서는 이 메일에 직접 첨부해 주세요.';
-    return `mailto:${email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    const body = greeting + lines.join('\n\n') + '\n\n※ 하자 사진과 대책서는 이 메일에 직접 첨부해 주세요.';
+    return `mailto:${contact?.email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   function updateMailPanel() {
@@ -1211,15 +1215,18 @@
     });
 
     mailVendorList.innerHTML = Object.entries(grouped).map(([vendor, claims]) => {
-      const email = VENDOR_CONTACTS[vendor]?.email;
-      const action = email
-        ? `<a class="manage-btn" href="${buildMailto(vendor, claims, email)}">메일 작성</a>`
+      const contact = VENDOR_CONTACTS[vendor];
+      const action = contact?.email
+        ? `<a class="manage-btn" href="${buildMailto(vendor, claims, contact)}">메일 작성</a>`
         : `<button type="button" class="manage-btn" data-open-contacts>이메일 미설정 · 설정하기</button>`;
+      const contactLabel = contact?.email
+        ? `${contact.name ? escapeHtml(contact.name) + ' · ' : ''}${escapeHtml(contact.email)}`
+        : '담당자 정보가 설정되지 않았어요';
       return `
         <div class="mail-vendor-row">
           <div>
             <div class="vname"><span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:hsl(${hueOf(vendor)} var(--tag-sat) 50%)"></span>${escapeHtml(vendor)} <span class="vcount">${claims.length}건</span></div>
-            <div class="vemail">${email ? escapeHtml(email) : '담당자 이메일이 설정되지 않았어요'}</div>
+            <div class="vemail">${contactLabel}</div>
           </div>
           ${action}
         </div>
@@ -1243,8 +1250,9 @@
   function openContactsModal() {
     contactsList.innerHTML = VENDORS.map(v => `
       <div class="contact-row">
-        <label for="contact-${v}">${escapeHtml(v)}</label>
-        <input type="email" id="contact-${v}" placeholder="담당자 이메일" value="${escapeHtml(VENDOR_CONTACTS[v]?.email || '')}">
+        <label for="contact-name-${v}">${escapeHtml(v)}</label>
+        <input type="text" id="contact-name-${v}" placeholder="담당자 이름" value="${escapeHtml(VENDOR_CONTACTS[v]?.name || '')}">
+        <input type="email" id="contact-email-${v}" placeholder="담당자 이메일" value="${escapeHtml(VENDOR_CONTACTS[v]?.email || '')}">
       </div>
     `).join('');
     contactsModal.hidden = false;
@@ -1255,8 +1263,9 @@
   document.getElementById('saveContacts').addEventListener('click', () => {
     const updates = {};
     VENDORS.forEach(v => {
-      const val = document.getElementById(`contact-${v}`).value.trim();
-      updates[v] = { email: val };
+      const name = document.getElementById(`contact-name-${v}`).value.trim();
+      const email = document.getElementById(`contact-email-${v}`).value.trim();
+      updates[v] = { name, email };
     });
     fbDb.ref(CONTACTS_PATH).update(updates)
       .then(() => { showToast('저장했어요.'); contactsModal.hidden = true; })
