@@ -651,9 +651,48 @@
   @media (max-width: 520px) {
     .contact-row { grid-template-columns: 1fr; gap: 4px; }
   }
+
+  .gate {
+    position: fixed; inset: 0;
+    background: var(--bg);
+    z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .gate[hidden] { display: none; }
+  .gate-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 28px;
+    width: min(320px, 100%);
+    text-align: center;
+  }
+  .gate-title { font-weight: 700; font-size: 1.05rem; margin-bottom: 6px; }
+  .gate-sub { color: var(--ink-dim); font-size: 0.85rem; margin: 0 0 16px; }
+  #gateForm { display: flex; gap: 8px; }
+  #gatePw {
+    flex: 1; min-width: 0;
+    background: var(--surface-alt); border: 1px solid var(--border); color: var(--ink);
+    font: inherit; font-size: 0.9rem; padding: 9px 10px; border-radius: 8px;
+  }
+  .gate-err { color: var(--danger); font-size: 0.8rem; margin: 12px 0 0; }
 </style>
 </head>
 <body>
+
+<div class="gate" id="gate">
+  <div class="gate-box">
+    <div class="gate-title">🔒 외주 고객클레임 관리</div>
+    <p class="gate-sub">비밀번호를 입력해 주세요</p>
+    <form id="gateForm">
+      <input type="password" id="gatePw" autocomplete="current-password" placeholder="비밀번호" inputmode="numeric">
+      <button type="submit" class="btn-primary">확인</button>
+    </form>
+    <p class="gate-err" id="gateErr" hidden>비밀번호가 틀렸어요.</p>
+  </div>
+</div>
 
 <div class="brandbar">
   <span class="brand-logo-wrap"><img class="brand-logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAHUAAAAoCAYAAADAFLWVAAAEt0lEQVR4nO2ZSYhdRRSGv+trO5MT3cZEwTmJokQT40JRceGMkiioQRIHCNm4EXEjmrgS3OhG40ZEiQOCLowmOGJWxgw4NyEYQY0Yp4iawU5i93tXSv6C4nGHqtu3Qxbng0vf9/reU6fOOXXOqXpgGIZhGIZhGIZhGIZhGIZhGMZRT1bz/+OBxcDchvI3Ax8DtwFzgBz4AtgA9EreGQKWAGfqs3v+XeCOBD32Ap8CI8C+YKwOcA5wA3BywjwOAc8CpwG3yC4HgfeArzWvIubr+SnAKPAS8CswA7gCuBQYTNDDjbWuwnb/M1AjZLqc6ozQhAEZ1znpOqALvAysr3jnBOB2TdoF3VrgfeBWyYhlXMHzBPCtDH8t8IKMmoILkueBs4CVwGzgL+AH4KuK9+YB9ysI/lBw7gdWS44LshReA96se6jOqZ48cYXnBff9f+ve75fR/12VLrkM5gJhJnCnVtZKBWqeMJcyHWLmUTSfhQryYxLeL5IzYad6gd8D2xIm9GWC0VLwehSloQw4D1ig+8uA5cBzfanuG6X2mLkc1MpvSmiD04Fpuv8H2KqUHMM2ycrbdOom4IEEp2aqkROhaKwtwIPA4ZJ35gJPA5drxV4vp4ayPlIarKxPAU1WVpmcTNefwBpgY+S7UQskxaleaCfBqb3ENJVqnE6JjmNaBbk+j1fMJYucQy9Bh/D/ddTJIBg/b9upmeqBi+5YPlGj1DYXA4+q8SrS82zgKn3uKsP049LyqgpD+TS3B3hFzVLINNXs8ytq/Tyl/KIew3EisAy4skIHPweXej8smfOEnHqhrlg6k+TUC3TFsB94taAWLdQVs51xXfM9wG+qr46pSuvuKqOo/v0O/Bt0+i4w6sg19pPAi3UlI7VOZJHXkSBGhx5wkbYfzjBv6bsYHb2cqVrVN2ufuCMyDZY1NK5+bo9peAI5zk+nans03HZNdVH2XeSzTuEfmRz2qAMuM8pMHTJ01BBdo0OItXLwCuDYmjFmSMZ02elcfb9CaXtRRHAMqxSENdMF1d0qY/NrZLj5zdL+OFMqH9b8W3GqU+YDdZ0pzY+rG23jHPVQkMZCMqXLNeq8nWNuBF7XHNbpUKJupbgt0TOqmZ5c6fixiIYx00naU8BxBSXh4cDZVXLuBR5XxvByW12pPXWSqRtvT1up2etRtnf8STVoSGO6FPxGoE/MnrNsnpnGr9sK+ef8fdEcYrZTsVuuxk5tit9auL+XAI9UBMZJwBkTDIQ8qJ150DssTmj0ZiuNh3q46y6lwzoyrfLBgu9dCj8lodMfONqcOq5DgjxYNe6KZXdLeuTATcDSBu+6bcTPundHjlc3GLurtOtscF/iLsJzSDKOyClJFQf0a8bfDQyxXXvE2DPfyWJEh/FN6coGv+hz3nBxrI85UhyIiIzNwenM5w2U8c3JqH55GYo0wi7gHRmiIz1cgKAz26pas09bh53Se0RB8FniT109ddkbAmNu0vFeLKPBT2aHpcdG/XIUywHN+e2Yw4csYiVPCWpTr+K8lURZdXp11d36tD0YdItej7xmrH5ZgwnZyT83FnTZft8ai5/rWF9z5g/0U+iXYRiGYRiGYRiGYRiGYRi0w38wDTHaFT4EegAAAABJRU5ErkJggg==" alt="FURSYS"></span>
@@ -839,6 +878,30 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
+  // ---------- 비밀번호 잠금 (가벼운 접근 제한용 — 완전한 보안은 아님) ----------
+  const GATE_PW = '0311';
+  const GATE_KEY = 'claim_dashboard_unlocked';
+  const gate = document.getElementById('gate');
+  const gateForm = document.getElementById('gateForm');
+  const gatePw = document.getElementById('gatePw');
+  const gateErr = document.getElementById('gateErr');
+  try {
+    if (localStorage.getItem(GATE_KEY) === '1') gate.hidden = true;
+  } catch (e) {}
+  gateForm.addEventListener('submit', e => {
+    e.preventDefault();
+    if (gatePw.value === GATE_PW) {
+      try { localStorage.setItem(GATE_KEY, '1'); } catch (e) {}
+      gate.hidden = true;
+      gateErr.hidden = true;
+    } else {
+      gateErr.hidden = false;
+      gatePw.value = '';
+      gatePw.focus();
+    }
+  });
+  if (!gate.hidden) setTimeout(() => gatePw.focus(), 50);
+
   // 업체 목록(가나다 순) — 새 업체가 생기면 여기에 추가하고 아래 VENDOR_HUE에도 색을 지정해 주세요
   const VENDORS = ["가온", "금용", "송아", "에픽", "엘에스에프", "올품", "유진", "정운", "제일", "진산"];
 
