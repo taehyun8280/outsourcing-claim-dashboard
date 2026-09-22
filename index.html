@@ -1208,7 +1208,7 @@
       `하자내역: ${c.defect || ''}`
     ));
     const body = greeting + lines.join('\n\n') + '\n\n※ 하자 사진과 대책서는 이 메일에 직접 첨부해 주세요.';
-    return `mailto:${contact?.email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(contact?.email || '')}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
   }
 
   function updateMailPanel() {
@@ -1224,7 +1224,7 @@
     mailVendorList.innerHTML = Object.entries(grouped).map(([vendor, claims]) => {
       const contact = VENDOR_CONTACTS[vendor];
       const action = contact?.email
-        ? `<a class="manage-btn" href="${buildMailto(vendor, claims, contact)}">메일 작성</a>`
+        ? `<a class="manage-btn" href="${buildMailto(vendor, claims, contact)}" target="_blank" rel="noopener">메일 작성</a>`
         : `<button type="button" class="manage-btn" data-open-contacts>이메일 미설정 · 설정하기</button>`;
       const contactLabel = contact?.email
         ? `${contact.name ? escapeHtml(contact.name) + ' · ' : ''}${escapeHtml(contact.email)}`
