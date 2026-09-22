@@ -538,6 +538,10 @@
     display: flex; align-items: center; justify-content: center;
     font-size: 0.62rem; font-weight: 700;
   }
+  .filechip .pdfmark.excelmark {
+    background: color-mix(in srgb, var(--accent-2) 18%, var(--surface));
+    color: var(--accent-2);
+  }
   .filechip .fname { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .filechip button {
     border: none; background: none; color: var(--ink-faint); cursor: pointer;
@@ -599,6 +603,10 @@
     background: var(--danger-soft); color: var(--danger);
     display: flex; align-items: center; justify-content: center;
     font-size: 0.6rem; font-weight: 700; text-decoration: none;
+  }
+  .pdflink.excellink {
+    background: color-mix(in srgb, var(--accent-2) 18%, var(--surface));
+    color: var(--accent-2);
   }
 
   .manage-cell { display: flex; gap: 5px; }
@@ -794,15 +802,15 @@
       <div class="dropzone" id="dropzone" tabindex="0" role="button" aria-label="하자 사진 또는 PDF 첨부">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <div><strong>클릭</strong>하거나 <strong>드래그</strong>, 또는 이미지 복사 후 <strong>Ctrl+V</strong>로 붙여넣어 첨부하세요</div>
-        <input type="file" id="fileInput" accept="image/*,application/pdf" multiple hidden>
+        <input type="file" id="fileInput" accept="image/*,application/pdf,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple hidden>
       </div>
       <div class="filechips" id="fileChips"></div>
 
-      <label class="attach-label">대책서 사진/PDF</label>
-      <div class="dropzone" id="dropzone2" tabindex="0" role="button" aria-label="대책서 사진 또는 PDF 첨부">
+      <label class="attach-label">대책서 사진/PDF/엑셀</label>
+      <div class="dropzone" id="dropzone2" tabindex="0" role="button" aria-label="대책서 사진, PDF 또는 엑셀 첨부">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 16V4M12 4l-4 4M12 4l4 4M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        <div><strong>클릭</strong>하거나 <strong>드래그</strong>, 또는 이미지 복사 후 <strong>Ctrl+V</strong>로 붙여넣어 첨부하세요</div>
-        <input type="file" id="fileInput2" accept="image/*,application/pdf" multiple hidden>
+        <div><strong>클릭</strong>하거나 <strong>드래그</strong>, 또는 이미지 복사 후 <strong>Ctrl+V</strong>로 붙여넣어 첨부하세요 (엑셀 파일도 가능)</div>
+        <input type="file" id="fileInput2" accept="image/*,application/pdf,.xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel" multiple hidden>
       </div>
       <div class="filechips" id="fileChips2"></div>
 
@@ -952,7 +960,14 @@
   const fbDb = firebase.database();
   const CLAIMS_PATH = 'outsourcing_claims/claims';
   const CONTACTS_PATH = 'outsourcing_claims/vendorContacts';
-  const MAX_FILE_BYTES = 1.5 * 1024 * 1024; // 결제 없는 무료 DB 저장이라 파일당 용량을 제한합니다
+  const MAX_FILE_BYTES = 4 * 1024 * 1024; // 결제 없는 무료 DB 저장이라 파일당 용량을 제한합니다
+  const EXCEL_TYPES = [
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.ms-excel'
+  ];
+  function isExcelFile(file) {
+    return EXCEL_TYPES.includes(file.type) || /\.(xlsx|xls)$/i.test(file.name);
+  }
 
   let fbReady = false;
   fbDb.ref(CLAIMS_PATH).on('value', snap => {
@@ -1092,13 +1107,14 @@
 
   async function addFilesTo(fileList, targetArr, renderFn) {
     for (const file of Array.from(fileList)) {
-      if (file.type === 'application/pdf') {
+      if (file.type === 'application/pdf' || isExcelFile(file)) {
         if (file.size > MAX_FILE_BYTES) {
-          showToast(`"${file.name}" 파일이 너무 커요 (1.5MB 이하만 첨부 가능).`, true);
+          showToast(`"${file.name}" 파일이 너무 커요 (4MB 이하만 첨부 가능).`, true);
           continue;
         }
         const dataUrl = await readAsDataUrl(file);
-        targetArr.push({ name: file.name, size: file.size, type: 'pdf', thumb: null, dataUrl });
+        const type = file.type === 'application/pdf' ? 'pdf' : 'excel';
+        targetArr.push({ name: file.name, size: file.size, type, thumb: null, dataUrl });
       } else if (file.type.startsWith('image/')) {
         const dataUrl = await resizeImage(file, 640, 0.72);
         targetArr.push({ name: file.name, size: file.size, type: 'image', thumb: dataUrl, dataUrl });
@@ -1112,7 +1128,7 @@
   function renderChipsInto(arr, chipsEl, rerender) {
     chipsEl.innerHTML = arr.map((f, i) => `
       <span class="filechip">
-        ${f.type === 'image' ? `<img src="${f.thumb}" alt="">` : `<span class="pdfmark">PDF</span>`}
+        ${f.type === 'image' ? `<img src="${f.thumb}" alt="">` : `<span class="pdfmark ${f.type === 'excel' ? 'excelmark' : ''}">${f.type === 'excel' ? 'XLS' : 'PDF'}</span>`}
         <span class="fname">${escapeHtml(f.name)}</span>
         <button type="button" data-i="${i}" aria-label="첨부 제거">✕</button>
       </span>
@@ -1314,8 +1330,9 @@
       const extra = images.length > 1 ? `<span class="imgcount">+${images.length - 1}</span>` : '';
       return `<button class="thumb" data-id="${c.id}" data-field="${field}"><img src="${escapeHtml(firstImg.url)}" alt="${escapeHtml(c.defect)} 사진">${extra}</button>`;
     }
-    const pdf = images[0];
-    return `<a class="pdflink" href="${escapeHtml(pdf.url)}" target="_blank" rel="noopener">PDF</a>`;
+    const file = images[0];
+    const isExcel = file.type === 'excel';
+    return `<a class="pdflink${isExcel ? ' excellink' : ''}" href="${escapeHtml(file.url)}" download="${escapeHtml(file.name || (isExcel ? '대책서.xlsx' : '파일.pdf'))}" target="_blank" rel="noopener">${isExcel ? 'XLS' : 'PDF'}</a>`;
   }
 
   function render() {
