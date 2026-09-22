@@ -878,20 +878,15 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <script>
-  // ---------- 비밀번호 잠금 (가벼운 접근 제한용 — 완전한 보안은 아님) ----------
+  // ---------- 비밀번호 잠금 (가벼운 접근 제한용 — 완전한 보안은 아님, 매번 입력) ----------
   const GATE_PW = '0311';
-  const GATE_KEY = 'claim_dashboard_unlocked';
   const gate = document.getElementById('gate');
   const gateForm = document.getElementById('gateForm');
   const gatePw = document.getElementById('gatePw');
   const gateErr = document.getElementById('gateErr');
-  try {
-    if (localStorage.getItem(GATE_KEY) === '1') gate.hidden = true;
-  } catch (e) {}
   gateForm.addEventListener('submit', e => {
     e.preventDefault();
     if (gatePw.value === GATE_PW) {
-      try { localStorage.setItem(GATE_KEY, '1'); } catch (e) {}
       gate.hidden = true;
       gateErr.hidden = true;
     } else {
