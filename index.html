@@ -737,7 +737,7 @@
     <strong id="mailSelectedCount">0건 선택됨</strong>
     <button type="button" class="btn-ghost" id="clearSelection">선택 해제</button>
   </div>
-  <p class="mail-panel-sub">업체별로 나눠서 대책서 메일 작성 창을 열어드려요. (첨부파일은 메일 창에서 직접 첨부해 주세요)</p>
+  <p class="mail-panel-sub">업체별로 나눠서 대책서 메일 작성 창을 열어드려요. (개선대책서 양식이 함께 다운로드되니, 내려받은 파일을 메일 창으로 끌어다 첨부해 주세요)</p>
   <div class="mail-vendor-list" id="mailVendorList"></div>
 </div>
 
@@ -1298,7 +1298,7 @@
     mailVendorList.innerHTML = Object.entries(grouped).map(([vendor, claims]) => {
       const contact = VENDOR_CONTACTS[vendor];
       const action = contact?.email
-        ? `<a class="manage-btn" href="${buildMailto(vendor, claims, contact)}" target="_blank" rel="noopener">메일 작성</a>`
+        ? `<a class="manage-btn" data-mail-compose href="${buildMailto(vendor, claims, contact)}" target="_blank" rel="noopener">메일 작성</a>`
         : `<button type="button" class="manage-btn" data-open-contacts>이메일 미설정 · 설정하기</button>`;
       const contactLabel = contact?.email
         ? `${contact.name ? escapeHtml(contact.name) + ' · ' : ''}${escapeHtml(contact.email)}`
@@ -1318,6 +1318,17 @@
       btn.addEventListener('click', openContactsModal);
     });
   }
+
+  // 메일 링크로는 파일을 자동 첨부할 수 없어서, 작성창을 열 때 개선대책서 양식을 함께 내려받게 합니다.
+  mailVendorList.addEventListener('click', e => {
+    if (!e.target.closest('a[data-mail-compose]')) return;
+    const a = document.createElement('a');
+    a.href = 'improvement-report-form.xls';
+    a.download = '개선대책서 양식.xls';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  });
 
   document.getElementById('clearSelection').addEventListener('click', () => {
     selectedIds.clear();
